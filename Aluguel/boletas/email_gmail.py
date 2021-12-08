@@ -21,8 +21,10 @@ NewMsgIDs = set()
 ProcessedMsgIDs = set()
 
 LOGIN = os.getenv('EMAIL_USER')
+# LOGIN = "joao.ramalho@kapitalo.com.br"
+# 
 PASSWORD= os.getenv('EMAIL_PASSWORD')
-
+# PASSWORD= "Titito456123789"
 
 def decode_list_senders(senders):
 	return ' OR '.join(senders)

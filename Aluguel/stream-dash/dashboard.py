@@ -29,6 +29,7 @@ from boletas.main import main as boleta_main
 import trading_sub
 from Renovacoes import renov_new
 
+
 from make_plots import (
     matplotlib_plot,
     sns_plot,
@@ -64,7 +65,7 @@ brokers ={'Ágora',
 ,'Interna'
 ,'Itau'
 ,'JP Morgan'
-,'Link'
+,'UBS'
 ,'Liquidez'
 ,'Merrill Lynch'
 ,'Mirae'
@@ -130,7 +131,33 @@ options=st.sidebar.selectbox('Which Dashboard?',{'Rotina','Mapa','Taxa','Ibovesp
 
 if options =='Mapa':
     
-    st.dataframe(mapa.map(data.df))
+    st.write("## Mapa")
+    if(st.sidebar.button("Update Database")):
+        data.df=mapa.main()
+        
+    
+    gb = GridOptionsBuilder.from_dataframe(data.df)
+    gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc='sum', editable=True)
+    
+    gb.configure_grid_options(domLayout='normal')
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True,)
+    gridOptions = gb.build()
+    
+    gb.configure_side_bar()
+    gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
+    grid_response = AgGrid(
+    data.df, 
+    gridOptions=gridOptions,
+    height= 600,
+    width='100%',
+    fit_columns_on_grid_load=False,
+    allow_unsafe_jscode=True, #Set it to True to allow jsfunction to be injected
+    enable_enterprise_modules=True,
+    theme = 'blue',
+    update_mode=GridUpdateMode.SELECTION_CHANGED
+    )
+
+    
 
 if options == 'Taxa':
     st.write("## Taxa")
@@ -198,6 +225,7 @@ if options =='Rotina':
         
     if(st.sidebar.button("Update Database")):
         data.df=mapa.main()
+        devol=main_devol(data.df)
     
     st.title("Rotina - BTC")
     st.write("Conjunto de arquivos uteis para a rotina")
@@ -330,6 +358,15 @@ if options =='Rotina':
         theme = 'blue',
         update_mode=GridUpdateMode.SELECTION_CHANGED
         )
+        
+        st.write("## Devoluções")
+        if data.devol.empty:
+            st.write("Não há devoluções disponíveis")
+        else:
+            st.write("Arquivo disponível em na pasta devoluções")
+            st.table(data.devol)
+
+        
     
 
     
@@ -344,6 +381,32 @@ if options == 'Boletador':
         tipo= st.sidebar.selectbox('Tipo?',{'borrow','loan'})
         st.write(boleta_main(broker=corretora,type=tipo) )       
         
+        
+    st.write("## Boletas do dia")
+    
+    gb = GridOptionsBuilder.from_dataframe(data.boletas_dia)
+    gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc='sum', editable=True)
+    
+    gb.configure_grid_options(domLayout='normal')
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True,)
+    gridOptions = gb.build()
+    
+    gb.configure_side_bar()
+    gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
+    grid_response = AgGrid(
+    data.boletas_dia, 
+    gridOptions=gridOptions,
+    height= 600,
+    width='100%',
+    fit_columns_on_grid_load=False,
+    allow_unsafe_jscode=True, #Set it to True to allow jsfunction to be injected
+    enable_enterprise_modules=True,
+    theme = 'blue',
+    update_mode=GridUpdateMode.SELECTION_CHANGED
+    )
+        
+        
+        
 
 if options== 'Taxa-Subsidio':
     st.write(options)
@@ -353,6 +416,8 @@ if options== 'Taxa-Subsidio':
     taxa= st.sidebar.number_input('Taxa (a,a)%',format="%.2f")
     vencimento=st.sidebar.date_input("Vencimento",datetime.datetime(2022,1,1))
     borrow_sub=pd.read_excel(table_subsidio,index_col=0)
+    
+    borrow_sub=trading_sub.del_sub(df=borrow_sub,df_boletas=data.boletas_dia)
     borrow_sub=borrow_sub.dropna(how='all',axis=0)
     
     if(st.sidebar.button('Registrar')):  

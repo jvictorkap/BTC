@@ -29,7 +29,7 @@ def get_email_renov_orama():
     email_gmail.get_mail_files(['igor.neves@orama.com.br'],'','G://Trading//K11//Aluguel//Trades//Orama//', [".xls", ".xlsm", ".xlsx"],'RenovOrama',att_newer_than=8)
 
 def get_email_ubs():
-    email_gmail.get_mail_files([],'','G://Trading//K11//Aluguel//Trades//UBS//', [".xls", ".xlsm", ".xlsx"],'AluguelUBS',str_search='(X-GM-RAW "k11@kapitalo.com.br confirmacao_btc_UBS has:attachment newer_than:8h")')
+    email_gmail.get_mail_files([],'','G://Trading//K11//Aluguel//Trades//UBS//', [".xls", ".xlsm", ".xlsx"],'AluguelUBS',str_search='(X-GM-RAW "k11@kapitalo.com.br btc UBS has:attachment newer_than:8h")')
 
 def get_email_renov_itau():
     email_gmail.get_mail_files(['evandro.lazaro-silva@itaubba.com'],'','G://Trading//K11//Aluguel//Trades//Itau//', [".xls", ".xlsm", ".xlsx"],'RenovItau',att_newer_than=8)
