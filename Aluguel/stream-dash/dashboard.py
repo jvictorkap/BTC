@@ -437,7 +437,7 @@ if options== 'Taxa-Subsidio':
     vencimento=st.sidebar.date_input("Vencimento",datetime.datetime(2022,1,1))
     borrow_sub=pd.read_excel(table_subsidio,index_col=0)
     
-    borrow_sub=trading_sub.del_sub(df=borrow_sub,df_boletas=data.boletas_dia)
+    # borrow_sub=trading_sub.del_sub(df=borrow_sub,df_boletas=data.boletas_dia)
     borrow_sub=borrow_sub.dropna(how='all',axis=0)
     
     if(st.sidebar.button('Registrar')):  
