@@ -13,6 +13,15 @@ import taxas
 	#
 
 
+memoize = {}
+def next_day(d):
+	global memoize
+	if d.strftime('%Y-%m-%d') not in memoize:
+
+		memoize[d.strftime('%Y-%m-%d')] = workdays.workday(d, days=1, holidays=workdays.load_holidays('B3'))
+
+	return memoize[d.strftime('%Y-%m-%d')]
+
 
 def main():
 
@@ -205,17 +214,9 @@ def main():
 	recalls = DB.get_recalls(dt_3)
 	pos = DB.get_aluguel_posrecall(dt_4)
 
-	# memoize = {}
-	# def next_day(d):
-	# 	global memoize
-	# 	if d.strftime('%Y-%m-%d') not in memoize:
-
-	# 		memoize[d.strftime('%Y-%m-%d')] = workdays.workday(d, days=1, holidays=workdays.load_holidays('B3'))
-
-	# 	return memoize[d.strftime('%Y-%m-%d')]
 
 
-	# pos['data'] = pos['data'].apply(lambda x: next_day(x))
+	pos['data'] = pos['data'].apply(lambda x: next_day(x))
 	df_recall = pd.merge(recalls, pos, left_on=['dte_databoleta', 'int_codcontrato'], right_on=['data', 'contrato'], how='outer')
 	df_recall = df_recall[[c for c in pos] + ['dbl_quantidade']].fillna(0)
 	df_recall = df_recall.rename(columns={'dbl_quantidade': 'recallD3'})
