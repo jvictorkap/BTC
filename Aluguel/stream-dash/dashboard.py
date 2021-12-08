@@ -3,13 +3,15 @@ import sys
 from matplotlib.pyplot import axis
 
 sys.path.append("..")
-
+from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
+from st_aggrid.shared import GridUpdateMode
 import streamlit as st
 from bokeh.models.widgets import Button
 from bokeh.models import CustomJS
 from streamlit_bokeh_events import streamlit_bokeh_events
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
 import psycopg2
 import requests
 import base64
@@ -25,6 +27,7 @@ import json
 import data 
 from boletas.main import main as boleta_main
 import trading_sub
+from Renovacoes import renov_new
 
 from make_plots import (
     matplotlib_plot,
@@ -209,9 +212,7 @@ if options =='Rotina':
     else:
         st.table(borrow_janela)
     
-    
-    
-    
+
     
     st.write('## Tomar para o dia ')
     
@@ -258,8 +259,6 @@ if options =='Rotina':
     st.write('## Saldo doador ')
     saldo_lend=mapa.get_lend_dia(data.df)
     saldo_lend=saldo_lend.rename(columns={'codigo':'Codigo','to_lend': 'Saldo'})
- 
-    # saldo_lend=saldo_lend.drop(['Codigo'],axis=1)
     
     
     if(saldo_lend.empty):
@@ -287,6 +286,52 @@ if options =='Rotina':
         refresh_on_update=True,
         override_height=120,
         debounce_time=0)
+    
+    st.write("## Renovações")
+    
+    if renov_new.df_renovacao.empty:
+        st.write("Não há vencimentos hoje")
+    else:
+        st.write("Emprestimos pendentes de renovação")
+        gb = GridOptionsBuilder.from_dataframe(renov_new.df_renovacao)
+        gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc='sum', editable=True)
+        
+        cellsytle_jscode = JsCode("""
+                                function(params) {
+                                if (params.value == 'D') {
+                                    return {
+                                        'color': 'white',
+                                        'backgroundColor': 'darkgreen'
+                                    }
+                                } else {
+                                    return {
+                                        'color': 'white',
+                                        'backgroundColor': 'darkyellow'
+                                    }
+                                }
+                                };
+                                """)
+        
+        gb.configure_column("str_tipo", cellStyle=cellsytle_jscode) 
+        gb.configure_grid_options(domLayout='normal')
+        gb.configure_selection(selection_mode="multiple", use_checkbox=True,)
+        gridOptions = gb.build()
+        
+        gb.configure_side_bar()
+        gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
+        grid_response = AgGrid(
+        renov_new.df_renovacao, 
+        gridOptions=gridOptions,
+        height= 400,
+        width='100%',
+        fit_columns_on_grid_load=False,
+        allow_unsafe_jscode=True, #Set it to True to allow jsfunction to be injected
+        enable_enterprise_modules=True,
+        theme = 'blue',
+        update_mode=GridUpdateMode.SELECTION_CHANGED
+        )
+    
+
     
     
 if options == 'Boletador':
