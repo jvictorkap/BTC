@@ -20,10 +20,11 @@ def consulta_ibov():
     ibov['cod']= ibov['cod'].astype(str)
     
     ibov.loc[0,'reductor']= float(r.json()['header']['reductor'].replace('.', '').replace(',', '.'))
-
+    print(ibov)
     
     return ibov
 
-
+if __name__ == '__main__':
+    consulta_ibov()
 
 

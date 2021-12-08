@@ -125,7 +125,7 @@ st.sidebar.write("Options")
 
 
     
-options=st.sidebar.selectbox('Which Dashboard?',{'Rotina','Mapa','Taxa','Ibovespa','Boletador','Taxa-Subsidio'})
+options=st.sidebar.selectbox('Which Dashboard?',{'Rotina','Mapa','Taxa','Boletador','Taxa-Subsidio'})
 
 # st.header(options)
 
@@ -191,32 +191,32 @@ if options == 'Taxa':
     
     st.plotly_chart(plot, use_container_width=True)
 
-if options =='Ibovespa':
-    st.write(options)
-    aux=carteira_ibov.consulta_ibov()
+# if options =='Ibovespa':
+#     st.write(options)
+#     aux=carteira_ibov.consulta_ibov()
 
-    aux['tckrsymb']=aux[['cod']]
+#     aux['tckrsymb']=aux[['cod']]
 
 
-    days= st.sidebar.number_input('Days',step=1,format="%i")
-    start = workdays.workday(datetime.date.today(), -days, workdays.load_holidays('B3'))
+#     days= st.sidebar.number_input('Days',step=1,format="%i")
+#     start = workdays.workday(datetime.date.today(), -days, workdays.load_holidays('B3'))
 
-    tk=DB.get_taxas(start)
+#     tk=DB.get_taxas(start)
     
-    tk=tk.merge(aux['tckrsymb'],on= 'tckrsymb', how= 'inner')
+#     tk=tk.merge(aux['tckrsymb'],on= 'tckrsymb', how= 'inner')
 
-    tk = tk.pivot(index='rptdt',columns='tckrsymb', values='takravrgrate')
-    # tk=tk.apply(strftime('%d-%m-%Y'))
-    # tk.index = tk.index.map(datetime.date.strftime('%d-%m-%Y'))
-    # tk=tk.reset_index()
-    # tk=tk.rename(columns={'rptdt':'days'})
-    # tk['days']=tk['days'].apply(lambda x: x.strftime('%d-%m-%Y')) 
-    tk.index = pd.to_datetime(tk.index, format = '%Y-%m-%d').strftime('%Y-%m-%d')     
-    # result = tk.to_json(orient="split")
-    # parsed = json.loads(result)
-    # print(parsed)
-    plot = altair_plot('Mult Line', tk,x="rptdt",y='value:Q')
-    st.altair_chart(plot, use_container_width=True)
+#     tk = tk.pivot(index='rptdt',columns='tckrsymb', values='takravrgrate')
+#     # tk=tk.apply(strftime('%d-%m-%Y'))
+#     # tk.index = tk.index.map(datetime.date.strftime('%d-%m-%Y'))
+#     # tk=tk.reset_index()
+#     # tk=tk.rename(columns={'rptdt':'days'})
+#     # tk['days']=tk['days'].apply(lambda x: x.strftime('%d-%m-%Y')) 
+#     tk.index = pd.to_datetime(tk.index, format = '%Y-%m-%d').strftime('%Y-%m-%d')     
+#     # result = tk.to_json(orient="split")
+#     # parsed = json.loads(result)
+#     # print(parsed)
+#     plot = altair_plot('Mult Line', tk,x="rptdt",y='value:Q')
+#     st.altair_chart(plot, use_container_width=True)
 
 
 if options =='Rotina':
@@ -225,7 +225,7 @@ if options =='Rotina':
         
     if(st.sidebar.button("Update Database")):
         data.df=mapa.main()
-        devol=main_devol(data.df)
+
     
     st.title("Rotina - BTC")
     st.write("Conjunto de arquivos uteis para a rotina")
@@ -358,13 +358,33 @@ if options =='Rotina':
         theme = 'blue',
         update_mode=GridUpdateMode.SELECTION_CHANGED
         )
+        ## Botão para renovar automatico
         
         st.write("## Devoluções")
         if data.devol.empty:
             st.write("Não há devoluções disponíveis")
         else:
-            st.write("Arquivo disponível em na pasta devoluções")
-            st.table(data.devol)
+            st.write("Arquivo disponível na pasta devoluções")
+            gb = GridOptionsBuilder.from_dataframe(data.devol)
+            gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc='sum', editable=True)
+            gb.configure_grid_options(domLayout='normal')
+            gb.configure_selection(selection_mode="multiple", use_checkbox=True,)
+            gridOptions = gb.build()
+            
+            gb.configure_side_bar()
+            gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
+            grid_response = AgGrid(
+            data.devol, 
+            gridOptions=gridOptions,
+            height= 400,
+            width='100%',
+            fit_columns_on_grid_load=False,
+            allow_unsafe_jscode=True, #Set it to True to allow jsfunction to be injected
+            enable_enterprise_modules=True,
+            theme = 'blue',
+            update_mode=GridUpdateMode.SELECTION_CHANGED)
+            
+            
 
         
     

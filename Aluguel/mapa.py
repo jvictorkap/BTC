@@ -97,6 +97,11 @@ def main():
 	df.rename(columns={'quantidade':'pos_tomada','value':'estimativa_tomada'}, inplace = True)
 
 	df['estimativa_tomada'].fillna(0,inplace= True)
+ 
+ 
+	df['estimativa_doada']=df['estimativa_doada'].round(2)
+
+	df['estimativa_tomada']=df['estimativa_tomada'].round(2)
 
 
 	df_ctosaluguel_trade = DB.get_alugueis_boletas(dt)
