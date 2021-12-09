@@ -151,7 +151,7 @@ def get_taxa(ticker_name, pos):
 			query = f"""SELECT rptdt, tckrsymb, sctyid, sctysrc, mktidrcd, isin, asst, qtyctrctsday, qtyshrday, valctrctsday, dnrminrate, dnravrgrate, dnrmaxrate, takrminrate, takravrgrate, takrmaxrate, mkt, mktnm, datasts \
 			FROM b3up2data.equities_assetloanfilev2 \
 			where   tckrsymb = '{ticker_name}' and mktnm = 'Balcao' order by rptdt desc
-			limit 252;
+			limit 1;
 			"""   
 			df = pd.read_sql(query, db_conn_risk)                
 			tx= float(df.iloc[pos]['takravrgrate'])

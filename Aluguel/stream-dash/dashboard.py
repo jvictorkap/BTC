@@ -12,6 +12,7 @@ from streamlit_bokeh_events import streamlit_bokeh_events
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
 import psycopg2
 import requests
 import base64
@@ -28,6 +29,7 @@ import data
 from boletas.main import main as boleta_main
 import trading_sub
 from Renovacoes import renov_new
+import pyperclip
 
 
 from make_plots import (
@@ -106,7 +108,7 @@ vcto_5 = 'venc '+ dt_next_5.strftime('%d/%m/%Y')
 
 image_path="logo-kapitalo.png"
 
-
+st.set_page_config(layout="wide")
 
 
 def img_to_bytes(img_path):
@@ -125,7 +127,7 @@ st.sidebar.write("Options")
 
 
     
-options=st.sidebar.selectbox('Which Dashboard?',{'Rotina','Mapa','Taxa','Boletador','Taxa-Subsidio'})
+options=st.sidebar.selectbox('Which Dashboard?',{'Rotina','Mapa','Taxa','Boletador','Taxa-Subsidio','Ibovespa'})
 
 # st.header(options)
 
@@ -160,6 +162,7 @@ if options =='Mapa':
     
 
 if options == 'Taxa':
+    
     st.write("## Taxa")
     ticker=st.sidebar.text_input('Ticker',value='BOVA11',max_chars=6)
     days= st.sidebar.number_input('Days',value=21,step=1,format="%i")
@@ -191,32 +194,6 @@ if options == 'Taxa':
     
     st.plotly_chart(plot, use_container_width=True)
 
-# if options =='Ibovespa':
-#     st.write(options)
-#     aux=carteira_ibov.consulta_ibov()
-
-#     aux['tckrsymb']=aux[['cod']]
-
-
-#     days= st.sidebar.number_input('Days',step=1,format="%i")
-#     start = workdays.workday(datetime.date.today(), -days, workdays.load_holidays('B3'))
-
-#     tk=DB.get_taxas(start)
-    
-#     tk=tk.merge(aux['tckrsymb'],on= 'tckrsymb', how= 'inner')
-
-#     tk = tk.pivot(index='rptdt',columns='tckrsymb', values='takravrgrate')
-#     # tk=tk.apply(strftime('%d-%m-%Y'))
-#     # tk.index = tk.index.map(datetime.date.strftime('%d-%m-%Y'))
-#     # tk=tk.reset_index()
-#     # tk=tk.rename(columns={'rptdt':'days'})
-#     # tk['days']=tk['days'].apply(lambda x: x.strftime('%d-%m-%Y')) 
-#     tk.index = pd.to_datetime(tk.index, format = '%Y-%m-%d').strftime('%Y-%m-%d')     
-#     # result = tk.to_json(orient="split")
-#     # parsed = json.loads(result)
-#     # print(parsed)
-#     plot = altair_plot('Mult Line', tk,x="rptdt",y='value:Q')
-#     st.altair_chart(plot, use_container_width=True)
 
 
 if options =='Rotina':
@@ -303,18 +280,19 @@ if options =='Rotina':
             st.dataframe(saldo_lend)
             
             
-        copy_button = Button(label="Copy Table")
-        copy_button.js_on_event("button_click", CustomJS(args=dict(df=saldo_lend.to_csv(sep='\t')), code="""
-        navigator.clipboard.writeText(df);
-        """))
-        no_event = streamlit_bokeh_events(
-        copy_button,
-        events="GET_TEXT",
-        key="get_text",
-        refresh_on_update=True,
-        override_height=120,
-        debounce_time=0)
-    
+        copy_button = st.button(label="Copy Table")
+        # copy_button.js_on_event("button_click", CustomJS(args=dict(df=saldo_lend.to_csv(sep='\t')), code="""
+        # navigator.clipboard.writeText(df);
+        # """))
+        # no_event = streamlit_bokeh_events(
+        # copy_button,
+        # events="GET_TEXT",
+        # key="get_text",
+        # refresh_on_update=True,
+        # override_height=120,
+        # debounce_time=0)
+        if copy_button:
+            pyperclip.copy(saldo_lend.to_csv(sep='\t'))
     st.write("## Renovações")
     
     if renov_new.df_renovacao.empty:
@@ -334,7 +312,7 @@ if options =='Rotina':
                                 } else {
                                     return {
                                         'color': 'white',
-                                        'backgroundColor': 'darkyellow'
+                                        'backgroundColor': 'darkred'
                                     }
                                 }
                                 };
@@ -383,13 +361,8 @@ if options =='Rotina':
             enable_enterprise_modules=True,
             theme = 'blue',
             update_mode=GridUpdateMode.SELECTION_CHANGED)
-            
-            
-
-        
-    
-
-    
+      
+                
     
 if options == 'Boletador':
     
@@ -448,4 +421,41 @@ if options== 'Taxa-Subsidio':
     st.dataframe(borrow_sub)
         
     
+if options== 'Ibovespa':
+    
+    st.write("## Ibovespa")
+    start = workdays.workday(datetime.date.today(), -3, workdays.load_holidays('B3'))
+    aux=DB.get_taxas(start,ticker_name='BOVA11')
+    aux = aux.pivot(index='rptdt',columns='tckrsymb', values='takravrgrate')
+    col1,col2 = st.columns(2)
+    col1.metric("Taxa Cateira",f"{data.ibov.loc[0,'Aluguel Carteira']}%")
+    col2.metric("Taxa BOVA11",f"{aux.loc[dt_1,'BOVA11']}%")
+
+    
+    gb = GridOptionsBuilder.from_dataframe(data.ibov[['cod','taxa','part','Analise Peso x Taxa']])
+    gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc='sum', editable=True)
+    
+    gb.configure_grid_options(domLayout='normal')
+    gb.configure_selection(selection_mode="multiple", use_checkbox=True,)
+    gridOptions = gb.build()
+    
+    gb.configure_side_bar()
+    gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
+    grid_response = AgGrid(
+    data.ibov[['cod','taxa','part','Analise Peso x Taxa']], 
+    gridOptions=gridOptions,
+    height= 300,
+    width='50%',
+    fit_columns_on_grid_load=True,
+    allow_unsafe_jscode=True, #Set it to True to allow jsfunction to be injected
+    enable_enterprise_modules=True,
+    theme = 'blue',
+    update_mode=GridUpdateMode.SELECTION_CHANGED
+    )
+    
+    
+    fig =px.pie(data.ibov,values='percentual',names='cod',title='Analise de composição'
+    )
+    fig.update_traces(textposition='inside', textinfo='percent+label')
+    st.plotly_chart(fig)
     
