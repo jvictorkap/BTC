@@ -70,7 +70,7 @@ def fill_devol(main_df:pd.DataFrame):
 
 
 
-	devol.rename(columns={'registro':'Data','corretora':'Corretora','tipo':'Tipo','vencimento':'Vencimento','taxa':f'Taxa (%a.a.)','preco_init':'Preço','reversor':'Reversivel','codigo':'Papel','contrato':'Codigo','quantidade':'Saldo','fim':'Quantidade','preco_init':'Preço'}, inplace=True)
+	devol.rename(columns={'registro':'Data','corretora':'Corretora','tipo':'Tipo','vencimento':'Vencimento','taxa':"Taxa",'preco_init':'Preço','reversor':'Reversivel','codigo':'Papel','contrato':'Codigo','quantidade':'Saldo','fim':'Quantidade','preco_init':'Preço'}, inplace=True)
 
 	devol.to_excel("devolucao.xlsx")
  

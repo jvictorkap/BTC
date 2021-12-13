@@ -201,6 +201,7 @@ if options =='Rotina':
     # if(st.sidebar.button('Update Database')):
         
     if(st.sidebar.button("Update Database")):
+        dt = datetime.date.today()
         data.df=mapa.main()
 
     
@@ -362,6 +363,13 @@ if options =='Rotina':
             theme = 'blue',
             update_mode=GridUpdateMode.SELECTION_CHANGED)
       
+      
+    st.write("## Repactuações")
+    st.write("soon")
+    
+    
+    
+      
                 
     
 if options == 'Boletador':
@@ -373,6 +381,9 @@ if options == 'Boletador':
     if corretora=='Bofa':
         tipo= st.sidebar.selectbox('Tipo?',{'borrow','loan'})
         st.write(boleta_main(broker=corretora,type=tipo) )       
+        
+    if (st.sidebar.button('Importa boletas')):
+        data.boletas_dia=DB.get_alugueis_boletas(dt)
         
         
     st.write("## Boletas do dia")
@@ -427,12 +438,29 @@ if options== 'Ibovespa':
     start = workdays.workday(datetime.date.today(), -3, workdays.load_holidays('B3'))
     aux=DB.get_taxas(start,ticker_name='BOVA11')
     aux = aux.pivot(index='rptdt',columns='tckrsymb', values='takravrgrate')
-    col1,col2 = st.columns(2)
+
+    col1,col2,col3 = st.columns(3)
     col1.metric("Taxa Cateira",f"{data.ibov.loc[0,'Aluguel Carteira']}%")
     col2.metric("Taxa BOVA11",f"{aux.loc[dt_1,'BOVA11']}%")
 
+    data.df=data.df[['codigo','taxa_doado']]
+    data.df=data.df.rename(columns={'codigo':'cod'})
+
+    data.ibov = pd.merge(data.ibov,data.df,on='cod',how= 'inner')
+
+    data.ibov["Analise Peso x Taxa Doado"] = data.ibov['taxa_doado']*data.ibov['part']
+
+    data.ibov["Analise Peso x Taxa Doado"]= data.ibov["Analise Peso x Taxa Doado"].round(2)
+
+    data.ibov.loc[0,"Aluguel Carteira Kappa"]= round(sum(data.ibov["Analise Peso x Taxa Doado"].tolist())/100,2)
+
+    data.ibov['percentual kappa']=(data.ibov["Analise Peso x Taxa Doado"]/data.ibov.loc[0,"Aluguel Carteira Kappa"])
+    data.ibov['percentual kappa']=data.ibov['percentual kappa'].round(2)
+
+
+    col3.metric("Taxa Carteira Kappa",f"{data.ibov.loc[0,'Aluguel Carteira Kappa']}%")
     
-    gb = GridOptionsBuilder.from_dataframe(data.ibov[['cod','taxa','part','Analise Peso x Taxa']])
+    gb = GridOptionsBuilder.from_dataframe(data.ibov[['cod','taxa','part','Analise Peso x Taxa','taxa_doado','Analise Peso x Taxa Doado']])
     gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc='sum', editable=True)
     
     gb.configure_grid_options(domLayout='normal')
@@ -442,7 +470,7 @@ if options== 'Ibovespa':
     gb.configure_side_bar()
     gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
     grid_response = AgGrid(
-    data.ibov[['cod','taxa','part','Analise Peso x Taxa']], 
+    data.ibov[['cod','taxa','part','Analise Peso x Taxa','taxa_doado','Analise Peso x Taxa Doado']], 
     gridOptions=gridOptions,
     height= 300,
     width='50%',
@@ -453,9 +481,21 @@ if options== 'Ibovespa':
     update_mode=GridUpdateMode.SELECTION_CHANGED
     )
     
+
+    col1_p,col2_p=st.columns(2)
+
+
     
-    fig =px.pie(data.ibov,values='percentual',names='cod',title='Analise de composição'
+    fig =px.pie(data.ibov,values='percentual',names='cod',title='Analise de composição carteira media'
     )
     fig.update_traces(textposition='inside', textinfo='percent+label')
-    st.plotly_chart(fig)
+    col1_p.plotly_chart(fig)
+
+
+    fig_kap =px.pie(data.ibov,values='percentual kappa',names='cod',title='Analise de composição carteira Kappa '
+    )
+    fig_kap.update_traces(textposition='inside', textinfo='percent+label')
+    col2_p.plotly_chart(fig_kap)
+    
+
     

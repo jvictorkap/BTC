@@ -37,14 +37,14 @@ def tabela_sub(df):
     return df[['corretora','codigo','quantidade','taxa','vencimento']]
 
 
-def del_sub(df:pd.DataFrame,df_boletas:pd.DataFrame):
+# def del_sub(df:pd.DataFrame,df_boletas:pd.DataFrame):
     
-    if (df['codigo']==df_boletas['str_papel'] and df['quantidade']==df_boletas['dbl_quantidade'].abs()):
-        df['exclui']=True
-        df=df.drop(df[df.exclui == True].index,Inplace=True)
-        df=df.drop(columns='exclui',axis=1)
-        df.dropna(how='all',axis=0)
-        return df
-    else:
-        return df
+#     if (df['codigo']==df_boletas['str_papel'] and df['quantidade']==df_boletas['dbl_quantidade'].abs()):
+#         df['exclui']=True
+#         df=df.drop(df[df.exclui == True].index,Inplace=True)
+#         df=df.drop(columns='exclui',axis=1)
+#         df.dropna(how='all',axis=0)
+#         return df
+#     else:
+#         return df
         

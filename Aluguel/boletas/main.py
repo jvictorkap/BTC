@@ -8,15 +8,17 @@ import argparse
 import os
 from datetime import datetime, timedelta, date
 import get_email_aluguel
-from brokers import mirae,bofa,orama,ubs,itau,btg
+from brokers import mirae,bofa,orama,ubs,itau,btg,terra
 import workdays
 import psycopg2
+import check_boletas
+import pandas as pd
 
 
 
 
 
-brokers = ['Bofa', 'Orama','Mirae','Geral','CM','UBS','Itau','BTG']
+brokers = ['Bofa', 'Orama','Mirae','Geral','CM','UBS','Itau','BTG','Terra']
 type = ['trade','loan','borrow']
 
 def main(broker,type,get_email=True):
@@ -73,10 +75,17 @@ def main(broker,type,get_email=True):
 	elif broker == 'BTG':
 		
 		df=btg.parse_excel_BTG(file_path)
+	
+	elif broker == 'Terra':
+	
+		df=terra.parse_excel_terra(file_path)
 	else:
 		return f"No automation ready to {broker}"
 		
-		
+	
+	# aux=check_boletas.check(df_boleta=df,df_main=pd.read_excel("C:\\Users\\joao.ramalho\\Documents\\GitHub\\BTC\\Aluguel\\Arquivos\\Doar\\Saldo-Dia\\Kappa_lend_to_day_08-12-2021.xlsx"))
+	# df=df.merge(aux,on='str_papel',how='inner')
+	
 	output_file_path = f"G://Trading//K11//Aluguel//Controle//{today.strftime('%d-%m-%Y')}//{broker}_{type}_{today.strftime('%Y%m%d')}.xlsx"
 	
 	if os.path.exists(f"G://Trading//K11//Aluguel//Controle//{today.strftime('%d-%m-%Y')}"):
@@ -86,8 +95,11 @@ def main(broker,type,get_email=True):
 		os.mkdir(f"G://Trading//K11//Aluguel//Controle//{today.strftime('%d-%m-%Y')}")
 		df.to_excel(output_file_path)
 	
-	# input_data(df)
 
+
+
+	# input_data(df)
+	
 	return f"{broker}\n Trading loaded, check G://Trading//K11//Aluguel//Controle///{broker}_{type}_{today.strftime('%Y%m%d')}.xlsx."
 
 

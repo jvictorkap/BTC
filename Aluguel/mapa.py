@@ -51,7 +51,7 @@ def main():
 	vcto_5 = 'venc '+ dt_next_5.strftime('%d/%m/%Y')
 
 	#Auxdictionay
-	df_corretagem= pd.read_excel(r'G:\Trading\K11\Python\Aluguel\Tables\Book_corretagens.xlsx')
+	# df_corretagem= pd.read_excel(r'G:\Trading\K11\\Aluguel\Tables\Book_corretagens.xlsx')
 
 	df_pos = DB.get_equity_positions(dt_1)
 	df = pd.DataFrame(df_pos[['regexp_replace','sum']])
@@ -131,7 +131,7 @@ def main():
 	df.rename(columns={'quantidade':'devol_tomado'},inplace=True)
 
 	df['taxa_doado'].fillna(0, inplace=True)
-
+	df['taxa_tomado'].fillna(0, inplace=True)
 
 	df['devol_tomado'].fillna(0,inplace = True)
 	df['devol_doado'].fillna(0,inplace = True)
@@ -311,12 +311,12 @@ def main():
 	janela_borrow= df[df['to_borrow_0'] !=  0 ]
 	janela_borrow= janela_borrow[["codigo","to_borrow_0"]]
 
-	janela_borrow.to_excel("G:\Trading\K11\Python\Aluguel\Arquivos\Tomar\Janela\\"+"tomar_janela_"+dt.strftime("%d-%m-%Y")+'.xlsx')
+	janela_borrow.to_excel("G:\Trading\K11\\Aluguel\Arquivos\Tomar\Janela\\"+"tomar_janela_"+dt.strftime("%d-%m-%Y")+'.xlsx')
 
 	dia_borrow= df[df['to_borrow_1'] !=  0 ]
 	dia_borrow= dia_borrow[["codigo","to_borrow_1"]]
 
-	dia_borrow.to_excel("G:\Trading\K11\Python\Aluguel\Arquivos\Tomar\Dia\\"+"tomar_dia_"+ dt.strftime("%d-%m-%Y") + '.xlsx')
+	dia_borrow.to_excel("G:\Trading\K11\\Aluguel\Arquivos\Tomar\Dia\\"+"tomar_dia_"+ dt.strftime("%d-%m-%Y") + '.xlsx')
 
 
 	#print(get_renov_saldo_neg())
@@ -339,7 +339,7 @@ def main():
 
 	lend_dia=lend_dia[["codigo","to_lend"]]
 
-	lend_dia.to_excel('G:\Trading\K11\Python\Aluguel\Arquivos\Doar\Saldo-Dia\\'+"Kappa_lend_to_day_"+ dt.strftime("%d-%m-%Y") + '.xlsx')
+	lend_dia.to_excel('G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\\'+"Kappa_lend_to_day_"+ dt.strftime("%d-%m-%Y") + '.xlsx')
 
 	df['to_lend Janela']=np.maximum(np.maximum(0,df['to_lend'])- df['mov_0'],0)
 

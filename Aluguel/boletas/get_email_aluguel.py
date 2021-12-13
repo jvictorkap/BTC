@@ -11,7 +11,7 @@ dt=date.today()
 
 
 def get_email_mirae():
-    email_gmail.get_mail_files(['william.parada@miraeinvest.com.br'],'','G://Trading//K11//Aluguel//Trades//Mirae//', [".xls", ".xlsm", ".xlsx"],'AluguelMirae',
+    email_gmail.get_mail_files(['william.parada@miraeinvest.com.br','carlos.santos@miraeinvest.com.br'],'','G://Trading//K11//Aluguel//Trades//Mirae//', [".xls", ".xlsm", ".xlsx"],'AluguelMirae',
                                att_newer_than=8)
     
 def get_email_bofa():
@@ -22,7 +22,7 @@ def get_email_cm():
     email_gmail.get_mail_files(['stephany.deluca@cmcapital.com.br'],'','G://Trading//K11//Aluguel//Trades//CM//', [".xls", ".xlsm", ".xlsx"],'AluguelCM',att_newer_than=8)
     
     
-def get_email_trade_orama():
+def get_email_orama():
     email_gmail.get_mail_files(['igor.neves@orama.com.br'],'','G://Trading//K11//Aluguel//Trades//Orama//', [".xls", ".xlsm", ".xlsx"],'AluguelOrama',att_newer_than=8)
     
 def get_email_renov_orama():
@@ -39,6 +39,9 @@ def get_email_itau():
     
 def get_email_btg():
     email_gmail.get_mail_files([],'','G://Trading//K11//Aluguel//Trades//BTG//', [".xlsx"],'AluguelBTG',str_search='(X-GM-RAW "@btgpactual.com KAPITALO KAPPA has:attachment newer_than:8h")')
+
+def get_email_terra():
+    email_gmail.get_mail_files([],'','G://Trading//K11//Aluguel//Trades//Terra//', [".xlsx"],'AluguelTerra',str_search='(X-GM-RAW "@terrainvestimentos.com BTC TERRA has:attachment newer_than:8h")')
 
 def get_email_all():
     get_email_ubs()
