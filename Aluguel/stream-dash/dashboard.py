@@ -443,10 +443,10 @@ if options== 'Ibovespa':
     col1.metric("Taxa Cateira",f"{data.ibov.loc[0,'Aluguel Carteira']}%")
     col2.metric("Taxa BOVA11",f"{aux.loc[dt_1,'BOVA11']}%")
 
-    data.df=data.df[['codigo','taxa_doado']]
-    data.df=data.df.rename(columns={'codigo':'cod'})
+    map_aux=data.df[['codigo','taxa_doado']]
+    map_aux=map_aux.rename(columns={'codigo':'cod'})
 
-    data.ibov = pd.merge(data.ibov,data.df,on='cod',how= 'inner')
+    data.ibov = pd.merge(data.ibov,map_aux,on='cod',how= 'inner')
 
     data.ibov["Analise Peso x Taxa Doado"] = data.ibov['taxa_doado']*data.ibov['part']
 
@@ -495,7 +495,7 @@ if options== 'Ibovespa':
     fig_kap =px.pie(data.ibov,values='percentual kappa',names='cod',title='Analise de composição carteira Kappa '
     )
     fig_kap.update_traces(textposition='inside', textinfo='percent+label')
-    col2_p.plotly_chart(fig_kap)
+    col2_p.plotly_chart(fig_kap)    
     
 
     
