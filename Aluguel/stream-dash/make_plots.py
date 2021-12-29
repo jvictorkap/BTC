@@ -10,9 +10,8 @@ import altair as alt
 from bokeh.plotting import figure
 
 
-
 def matplotlib_plot(chart_type: str, df):
-    """ return matplotlib plots """
+    """return matplotlib plots"""
 
     fig, ax = plt.subplots()
     if chart_type == "Scatter":
@@ -63,7 +62,7 @@ def matplotlib_plot(chart_type: str, df):
 
 
 def sns_plot(chart_type: str, df):
-    """ return seaborn plots """
+    """return seaborn plots"""
 
     fig, ax = plt.subplots()
     if chart_type == "Scatter":
@@ -98,8 +97,8 @@ def sns_plot(chart_type: str, df):
     return fig
 
 
-def plotly_plot(chart_type: str, df,y):
-    """ return plotly plots """
+def plotly_plot(chart_type: str, df, y):
+    """return plotly plots"""
 
     if chart_type == "Scatter":
         with st.echo():
@@ -132,12 +131,12 @@ def plotly_plot(chart_type: str, df,y):
             fig = px.box(data_frame=df, x="species", y="bill_depth_mm")
     elif chart_type == "Line":
         # with st.echo():
-            fig = px.line(
-                data_frame=df,
-                x=df.index,
-                y=y,
-                title=y,
-            )
+        fig = px.line(
+            data_frame=df,
+            x=df.index,
+            y=y,
+            title=y,
+        )
     elif chart_type == "3D Scatter":
         with st.echo():
             fig = px.scatter_3d(
@@ -152,8 +151,8 @@ def plotly_plot(chart_type: str, df,y):
     return fig
 
 
-def altair_plot(chart_type: str, df,x=None,y=None,z=None):
-    """ return altair plots """
+def altair_plot(chart_type: str, df, x=None, y=None, z=None):
+    """return altair plots"""
 
     if chart_type == "Scatter":
         with st.echo():
@@ -199,27 +198,23 @@ def altair_plot(chart_type: str, df,x=None,y=None,z=None):
             .interactive()
         )
     elif chart_type == "Mult Line":
-            # with st.echo():
-            fig = (
-                alt.Chart(df.reset_index(), title=y).transform_fold(df.columns.tolist())
-                .mark_line(interpolate='basis')
-                .encode(
-                    x=f"{x}:T",
-                    y=y,
-                    color='key:N',
-                    tooltip=['rptdt:T','key:N','value:Q']
-    
-                ).interactive()
-                
-
+        # with st.echo():
+        fig = (
+            alt.Chart(df.reset_index(), title=y)
+            .transform_fold(df.columns.tolist())
+            .mark_line(interpolate="basis")
+            .encode(
+                x=f"{x}:T", y=y, color="key:N", tooltip=["rptdt:T", "key:N", "value:Q"]
             )
-            
-            #     alt.Chart(df).transform_fold(
-#     ['Adds', 'Deletes', 'Changes']
-# ).mark_bar().encode(
-#     x='yearmonthdate(Date):O',
-#     y='value:Q',
-#     color='key:N'
+            .interactive()
+        )
+
+        #     alt.Chart(df).transform_fold(
+    #     ['Adds', 'Deletes', 'Changes']
+    # ).mark_bar().encode(
+    #     x='yearmonthdate(Date):O',
+    #     y='value:Q',
+    #     color='key:N'
     elif chart_type == "3D Scatter":
         st.write("Altair doesn't do 3D ☹️. Here's 2D.")
         fig = (
@@ -232,7 +227,7 @@ def altair_plot(chart_type: str, df,x=None,y=None,z=None):
 
 
 def pd_plot(chart_type: str, df):
-    """ return pd matplotlib plots """
+    """return pd matplotlib plots"""
 
     fig, ax = plt.subplots()
     if chart_type == "Scatter":
@@ -283,7 +278,7 @@ def pd_plot(chart_type: str, df):
 
 
 def bokeh_plot(chart_type: str, df):
-    """ return bokeh plots """
+    """return bokeh plots"""
 
     if chart_type == "Scatter":
         with st.echo():

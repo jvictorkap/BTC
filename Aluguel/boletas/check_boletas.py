@@ -1,28 +1,28 @@
 import sys
 
 # from input_boleta import input_data
-sys.path.append('..')
-import pandas as pd 
+sys.path.append("..")
+import pandas as pd
 import mapa
 
-def check(df_boleta: pd.DataFrame, df_main:pd.DataFrame):
 
-    df_boleta=df_boleta.groupby('str_papel')['dbl_quantidade'].sum()
-    df_boleta=df_boleta.to_frame()
-    df_boleta=df_boleta.reset_index()
+def check(df_boleta: pd.DataFrame, df_main: pd.DataFrame):
+
+    df_boleta = df_boleta.groupby("str_papel")["dbl_quantidade"].sum()
+    df_boleta = df_boleta.to_frame()
+    df_boleta = df_boleta.reset_index()
     # df_boleta.rename(columns={'str_papel':'codigo'}, inplace=True)
-    df_main.rename(columns={'codigo':'str_papel'}, inplace=True)
-    df_compare=df_main.merge(df_boleta, on='str_papel',how = 'inner')
+    df_main.rename(columns={"codigo": "str_papel"}, inplace=True)
+    df_compare = df_main.merge(df_boleta, on="str_papel", how="inner")
     # df_boleta.rename(columns={'str_papel':'codigo'}, inplace=True)
 
-    df_compare['teste']=df_compare['to_lend']+df_compare['dbl_quantidade']
+    ## Doador
+    df_compare["teste"] = df_compare["to_lend"] + df_compare["dbl_quantidade"]
 
-    
     # print(df_compare[df_compare['teste']>=0])
-    df_compare=df_compare[df_compare['teste']>=0]
-    
-    return df_compare['str_papel']
+    df_compare = df_compare[df_compare["teste"] >= 0]
 
+    return df_compare["str_papel"]
 
 
 # if __name__ == '__main__':

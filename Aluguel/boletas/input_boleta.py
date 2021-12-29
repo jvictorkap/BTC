@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append("..")
 
 import datetime
@@ -15,12 +16,14 @@ import pymongo
 import DB
 
 holidays = workdays.load_holidays()
-holidays_b3 = workdays.load_holidays('B3')
+holidays_b3 = workdays.load_holidays("B3")
 
-today = datetime.date.today().strftime('%Y-%m-%d')
+today = datetime.date.today().strftime("%Y-%m-%d")
 
 
-def input_data(df,):
+def input_data(
+    df,
+):
 
     conn = DB.db_conn_test
     cursor = conn.cursor()
@@ -32,10 +35,12 @@ def input_data(df,):
         columns = ",".join(df_columns)
 
         # create VALUES('%s', '%s",...) one '%s' per column
-        values = "VALUES({})".format(",".join(["%s" for _ in df_columns])) 
+        values = "VALUES({})".format(",".join(["%s" for _ in df_columns]))
 
-        #create INSERT INTO table (columns) VALUES('%s',...)
-        insert_stmt = "INSERT INTO {} ({}) {}".format('public.tbl_novasboletasaluguel',columns,values)
+        # create INSERT INTO table (columns) VALUES('%s',...)
+        insert_stmt = "INSERT INTO {} ({}) {}".format(
+            "public.tbl_novasboletasaluguel", columns, values
+        )
 
         cur = conn.cursor()
         psycopg2.extras.execute_batch(cur, insert_stmt, df.values)
