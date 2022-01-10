@@ -71,7 +71,7 @@ def get_renov_broker(broker, type="trade", get_email=True):
 
 def main():
 
-    df_broker = get_renov_broker(broker="Itau")
+    df_broker = get_renov_broker(broker="Orama")
     print(df_renovacao)
     df = df_renovacao.merge(df_broker, on="contrato", how="inner")
     df = df.merge(df_mapa, on="codigo", how="inner")

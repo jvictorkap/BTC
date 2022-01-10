@@ -129,6 +129,16 @@ def get_email_santander():
         att_newer_than=8,
     )
 
+def get_email_cm():
+    email_gmail.get_mail_files(
+        ["edvaldo.todeschini@cmcapital.com.br"],
+        "",
+        "G://Trading//K11//Aluguel//Trades//CM//",
+        [".xls", ".xlsm", ".xlsx"],
+        "AluguelCM",
+        att_newer_than=8,
+    )
+
 
 def get_email_all():
     get_email_ubs()

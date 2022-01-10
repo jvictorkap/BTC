@@ -18,16 +18,15 @@ passwd = "kappa.80913"
 
 def parse_excel_ubs(file_path):
 
-    file = msoffcrypto.OfficeFile(open(file_path, "rb"))
+    # file = msoffcrypto.OfficeFile(open(file_path, "rb"))
 
-    file.load_key(password="kappa.80913")  # Use password
+    # file.load_key(password="kappa.80913")  # Use password
 
-    decrypted = io.BytesIO()
-    file.decrypt(decrypted)
+    # decrypted = io.BytesIO()
+    # file.decrypt(decrypted)
 
-    df = pd.read_excel(decrypted)
-
-    print(df)
+    # df = pd.read_excel(decrypted)
+    df = pd.read_excel(file_path)
 
     # df=df.columns(['MODALIDADE'	,'FUNDO'	,'CORRETORA'	,'PONTA'	,'VCTO',	'TAXA'	,'PAPEL'	,'QUANTIDADE'])
     df.rename(
@@ -42,12 +41,13 @@ def parse_excel_ubs(file_path):
         inplace=True,
     )
 
+    df["str_tipo"] = df['lado'].apply(lambda x: "D" if x=='DOADOR' else  "T" if x=='TOMADOR' else None)
     df.fillna(0, inplace=True)
-    df = df[df["str_papel"] != 0]
+    df = df[df["str_tipo"] != 0]
     df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
     df["str_corretora"] = "Link"
     df["str_tipo_registro"] = df["modalidade"].apply(
-        lambda x: "R" if x == "balcao" else "N" if x == "D1" else None
+        lambda x: "R" if x == "BALCÃO" else "N" if x == "D+1" else None
     )
     df["str_modalidade"] = df["str_tipo_registro"].apply(
         lambda x: "E1" if x == "N" else None
@@ -57,8 +57,13 @@ def parse_excel_ubs(file_path):
     df["str_reversivel"] = "TD"
     df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
     df["str_status"] = "Emprestimo"
-    df["str_tipo"] = "D"
-    df["dbl_quantidade"] = df["dbl_quantidade"] * (-1)
+    
+    df["dbl_quantidade"] = df.apply(
+        lambda row: row["dbl_quantidade"]
+        if row["str_tipo"] == "T"
+        else -row["dbl_quantidade"],
+        axis=1,
+    )
 
     return df[
         [

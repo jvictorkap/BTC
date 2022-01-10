@@ -8,7 +8,7 @@ import argparse
 import os
 from datetime import datetime, timedelta, date
 import get_email_aluguel
-from brokers import mirae, bofa, orama, ubs, itau, btg, terra, santander
+from brokers import mirae, bofa, orama, ubs, itau, btg, terra, santander, cm
 import workdays
 import psycopg2
 import check_boletas
@@ -72,7 +72,7 @@ def main(broker, type, get_email=True):
 
     elif broker == "CM":
 
-        df = bofa.parse_excel_cm(file_path)
+        df = cm.parse_excel_cm(file_path)
 
     elif broker == "UBS":
 
