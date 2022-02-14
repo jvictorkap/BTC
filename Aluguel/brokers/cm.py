@@ -40,7 +40,10 @@ def parse_excel_cm(file_path):
     df["dbl_valor_fixo_comissao"] = 0
     df["str_reversivel"] = "TD"
     df["str_status"] = "Emprestimo"
-    df["str_tipo"] = df["lado"].apply(lambda x: "T" if x == "TOMADOR" else "D")
+    try:
+        df["str_tipo"] = df["lado"].apply(lambda x: "T" if x == "TOMADOR" else "D")
+    except:
+        df['str_tipo']='D'
     df["dbl_quantidade"] = df.apply(
         lambda row: row["dbl_quantidade"]
         if row["str_tipo"] == "T"

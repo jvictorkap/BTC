@@ -8,7 +8,7 @@ import argparse
 import os
 from datetime import datetime, timedelta, date
 import get_email_aluguel
-from brokers import mirae, bofa, orama, ubs, itau, btg, terra, santander, cm
+from brokers import mirae, bofa, orama, ubs, itau, btg,modal, terra, santander, cm,safra
 import workdays
 import psycopg2
 import check_boletas
@@ -26,6 +26,8 @@ brokers = [
     "BTG",
     "Terra",
     "Santander",
+    "Modal",
+    "Safra"
 ]
 type = ["trade", "loan", "borrow"]
 
@@ -92,7 +94,12 @@ def main(broker, type, get_email=True):
     elif broker == "Santander":
 
         df = santander.parse_excel_santander(file_path)
+    elif broker == "Modal":
 
+        df = modal.parse_excel_modal(file_path)
+    elif broker == "Modal":
+
+        df = safra.parse_excel_safra(file_path)
     else:
         return f"No automation ready to {broker}"
 

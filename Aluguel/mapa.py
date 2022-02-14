@@ -234,7 +234,7 @@ def main():
 	ibov = ibov[["cod", "theoricalQty", "reductor"]]
 	ibov.rename(columns={"cod": "codigo"}, inplace=True)
 
-	ibov["unidade"] = round(ibov["theoricalQty"] / ibov.iloc[0]["reductor"], 0) * (-100)
+	ibov["unidade"] = round(ibov["theoricalQty"] / ibov.iloc[0]["reductor"], 0) * (-200)
 
 	df = df.merge(ibov[["codigo", "unidade"]], on="codigo", how="outer")
 	df.rename(columns={"unidade": "mov_2"}, inplace=True)
@@ -513,7 +513,7 @@ def get_df_devol_doador(df):
 
 def get_df_custodia(df):
 
-	return df[["codigo", "position", "to_lend Dia agg"]]
+	return df[["codigo", "position", "to_lend Dia agg",'to_borrow_1']]
 
 
 def map(df):

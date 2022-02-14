@@ -2,7 +2,6 @@ from os import error
 from typing import Optional
 import config
 import psycopg2
-import psycopg2.extras
 import pandas as pd
 import workdays
 import datetime
@@ -174,21 +173,22 @@ def get_taxa(ticker_name, pos):
 
     try:
         query = f"""SELECT rptdt, tckrsymb, sctyid, sctysrc, mktidrcd, isin, asst, qtyctrctsday, qtyshrday, valctrctsday, dnrminrate, dnravrgrate, dnrmaxrate, takrminrate, takravrgrate, takrmaxrate, mkt, mktnm, datasts \
-			FROM b3up2data.equities_assetloanfilev2 \
-			where   tckrsymb = '{ticker_name}' and mktnm = 'Balcao' order by rptdt desc
-			limit 1;
-			"""
+            FROM b3up2data.equities_assetloanfilev2 \
+            where   tckrsymb = '{ticker_name}' and mktnm = 'Balcao' order by rptdt desc
+            limit 1;
+            """
         df = pd.read_sql(query, db_conn_risk)
         tx = float(df.iloc[pos]["takravrgrate"])
+    
     except:
-        # tx=0
-        query = f"""SELECT ticker, ts, quantity, rate, id
-			FROM public.aluguel_b3 where ts>='{dt_1.strftime("%Y-%m-%d")}';"""
-        df = pd.read_sql(query, db_conn_test)
-        df["s"] = df["quantity"] * df["rate"]
-        df = df.groupby("ticker").sum()
-        df["avg_rate"] = df["s"] / df["quantity"]
-        tx = float(df.loc[ticker_name, "avg_rate"])
+        tx=0
+        # query = f"""SELECT ticker, ts, quantity, rate, id
+		# 	FROM public.aluguel_b3 where ts>='{dt_1.strftime("%Y-%m-%d")}';"""
+        # df = pd.read_sql(query, db_conn_test)
+        # df["s"] = df["quantity"] * df["rate"]
+        # df = df.groupby("ticker").sum()
+        # df["avg_rate"] = df["s"] / df["quantity"]
+        # tx = float(df.loc[ticker_name, "avg_rate"])
 
     return tx
 

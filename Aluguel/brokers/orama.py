@@ -25,7 +25,7 @@ def parse_excel_orama(file_path):
     )
 
     df.fillna(0, inplace=True)
-    df["dbl_taxa"] = df["taxa"].apply(lambda x: x.replace("%", "")).astype(float)
+    df["dbl_taxa"] = df["taxa"].astype(float)*100
     df = df[df["str_papel"] != 0]
 
     df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"

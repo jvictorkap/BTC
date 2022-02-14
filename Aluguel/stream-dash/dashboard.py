@@ -1,4 +1,3 @@
-from os import replace
 import sys
 from typing import Optional
 
@@ -58,7 +57,7 @@ brokers = {
     "BR Partners",
     "Bradesco",
     "BTG",
-    "Capital Markets",
+    "CM",
     "Citi",
     "Concordia",
     "Convenção",
@@ -430,6 +429,55 @@ if options == "Rotina":
         copy_button_devol = st.button(label="Copy Table Devol")
         if copy_button_devol:
             pyperclip.copy(data.devol.to_csv(sep="\t").replace(".", ","))
+
+
+    if data.devol_doador.empty:
+        st.write("Não há devoluções doadoras disponíveis")
+    else:
+        st.write("Arquivo disponível na pasta devoluções")
+
+        gb = GridOptionsBuilder.from_dataframe(data.devol_doador)
+        gb.configure_default_column(
+            groupable=True,
+            value=True,
+            enableRowGroup=True,
+            aggFunc="sum",
+            editable=True,
+        )
+        gb.configure_grid_options(domLayout="normal")
+        gb.configure_selection(
+            selection_mode="multiple",
+            use_checkbox=True,
+        )
+        gridOptions = gb.build()
+
+        gb.configure_side_bar()
+        gb.configure_default_column(
+            groupable=True,
+            value=True,
+            enableRowGroup=True,
+            aggFunc="sum",
+            editable=True,
+        )
+        grid_response = AgGrid(
+            data.devol_doador,
+            gridOptions=gridOptions,
+            height=400,
+            width="100%",
+            fit_columns_on_grid_load=False,
+            allow_unsafe_jscode=True,  # Set it to True to allow jsfunction to be injected
+            enable_enterprise_modules=True,
+            theme="blue",
+            update_mode=GridUpdateMode.SELECTION_CHANGED,
+        )
+        copy_button_devol = st.button(label="Copy Table Devol Loan")
+        if copy_button_devol:
+            pyperclip.copy(data.devol_doador.to_csv(sep="\t").replace(".", ","))
+
+
+
+
+
 
     st.write("## Repactuações")
 

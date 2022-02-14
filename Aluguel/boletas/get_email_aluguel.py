@@ -11,12 +11,13 @@ dt = date.today()
 
 def get_email_mirae():
     email_gmail.get_mail_files(
-        ["william.parada@miraeinvest.com.br", "carlos.santos@miraeinvest.com.br"],
+        [],
         "",
         "G://Trading//K11//Aluguel//Trades//Mirae//",
         [".xls", ".xlsm", ".xlsx"],
         "AluguelMirae",
         att_newer_than=8,
+        str_search='(X-GM-RAW "k11@kapitalo.com.br Mirae has:attachment newer_than:8h")',
     )
 
 
@@ -33,7 +34,8 @@ def get_email_bofa():
 
 def get_email_cm():
     email_gmail.get_mail_files(
-        ["stephany.deluca@cmcapital.com.br"],
+        ["stephany.deluca@cmcapital.com.br",
+        "edvaldo.todeschini@cmcapital.com.br"],
         "",
         "G://Trading//K11//Aluguel//Trades//CM//",
         [".xls", ".xlsm", ".xlsx"],
@@ -131,7 +133,8 @@ def get_email_santander():
 
 def get_email_cm():
     email_gmail.get_mail_files(
-        ["edvaldo.todeschini@cmcapital.com.br"],
+        ["edvaldo.todeschini@cmcapital.com.br",
+        "stephany.deluca@cmcapital.com.br"],
         "",
         "G://Trading//K11//Aluguel//Trades//CM//",
         [".xls", ".xlsm", ".xlsx"],
@@ -139,6 +142,26 @@ def get_email_cm():
         att_newer_than=8,
     )
 
+def get_email_modal():
+    email_gmail.get_mail_files(
+        ["vinicius.carmo@modal.com.br"],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Modal//",
+        [".xls", ".xlsm", ".xlsx"],
+        "AluguelModal",
+        att_newer_than=8,
+)
+
+def get_email_safra():
+#     email_gmail.get_mail_files(
+#         [""],
+#         "",
+#         "G://Trading//K11//Aluguel//Trades//Modal//",
+#         [".xls", ".xlsm", ".xlsx"],
+#         "AluguelSafra",
+#         att_newer_than=8,
+# )
+    return
 
 def get_email_all():
     get_email_ubs()
