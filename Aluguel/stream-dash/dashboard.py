@@ -19,6 +19,7 @@ import requests
 import base64
 import mapa
 from pathlib import Path
+import plotly.graph_objects as go
 import DB
 import datetime
 import workdays
@@ -34,6 +35,7 @@ import trading_sub
 from Renovacoes import renov_new
 import pyperclip
 from BBI import get_bbi
+from plotly.subplots import make_subplots
 
 
 from make_plots import (
@@ -181,8 +183,11 @@ if options == "Taxa":
     days = st.sidebar.number_input("Days", value=21, step=1, format="%i")
     start = workdays.workday(datetime.date.today(), -days, workdays.load_holidays("B3"))
 
-    tx_df = DB.get_taxas(start, ticker_name=ticker)
-    tx_df = tx_df.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
+    df = DB.get_taxas(start, ticker_name=ticker)
+    tx_df = df.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
+    vol= df.pivot(index="rptdt", columns="tckrsymb", values="qtyshrday")
+    vol=vol.rename(columns={ticker:"VOLUME"})
+
     ano = workdays.workday(datetime.date.today(), -252, workdays.load_holidays("B3"))
 
     aux = DB.get_taxas(ano, ticker_name=ticker)
@@ -203,9 +208,21 @@ if options == "Taxa":
     col4.metric("Media 10 dias", f"{media_10}%")
     col5.metric("Taxa atual", f"{tx_df.loc[dt_1,ticker]}%")
 
-    plot = plotly_plot("Line", tx_df, y=ticker)
 
-    st.plotly_chart(plot, use_container_width=True)
+    # plot = plotly_plot("Line", tx_df, y=ticker)
+    
+    # st.plotly_chart(plot, use_container_width=True)
+    
+    fig = make_subplots(specs=[[{'secondary_y':True}]])
+    
+
+
+    
+    
+    fig.add_trace(go.Bar(x=vol.index,y=vol['VOLUME'].tolist(),name='Volume'),secondary_y=False)
+    fig.add_trace(go.Scatter(x=tx_df.index,y=tx_df[ticker].tolist(),name='Taxa'),secondary_y=True)
+
+    st.plotly_chart(fig, use_container_width=True)
 
 
 if options == "Rotina":
