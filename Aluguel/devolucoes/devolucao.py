@@ -116,8 +116,10 @@ def fill_devol_doador(main_df: pd.DataFrame):
 
     df = get_df_devol_doador(main_df)
 
+    # cash = pd.read_excel('trades_cash.xlsx')
+    
     devol = emprestimo.get_devolucao_doadora()
-
+    
     devol["estimativa"] = devol["taxa"] * devol["preco_init"]
 
     devol = devol.sort_values(["codigo", "estimativa"], ascending=(True, False))
@@ -131,17 +133,20 @@ def fill_devol_doador(main_df: pd.DataFrame):
         get_df_custodia(emprestimo.main_df)[["codigo", "position",'to_borrow_1']], on="codigo", how="inner"
     )
 
+    # ativos_devol = ativos_devol.merge(
+    # cash, on="codigo", how="inner")
 
-    
-    
-    
+        
 
 
     devol = devol.merge(ativos_devol, on="codigo", how="inner")
 
-    devol["devol_doador"] = devol["to_borrow_1"]*(-1)
+
+    # devol["devol_doador"] = devol["venda"]*(-1)
+    devol["devol_doador"] = devol["devol_doador"]*(-1)
     devol["quantidade"]=devol["quantidade"]*(-1)
-    devol=devol[devol['to_borrow_1']!=0]
+    # devol=devol[devol['venda']!=0]
+    devol=devol[devol['devol_doador']!=0]
     
 
     devol["fim"] = 0
@@ -209,7 +214,7 @@ def fill_devol_doador(main_df: pd.DataFrame):
         inplace=True,
     )
 
-
+    print(devol)
     devol.to_excel("devol.xlsx")
     return devol
 

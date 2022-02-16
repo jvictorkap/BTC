@@ -189,10 +189,10 @@ if options == "Taxa":
     aux = aux.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
 
     media_ano = round(aux[ticker].sum() / 252, 2)
-    aux_0 = aux.iloc[125:251]
+    aux_0 = aux.iloc[0:125]
     media_sem = round((aux_0[ticker].sum()) / 126, 2)
-    media_21 = round((aux.iloc[230:251][ticker].sum()) / 21, 2)
-    media_10 = round((aux.iloc[241:251][ticker].sum()) / 10, 2)
+    media_21 = round((aux.iloc[0:21][ticker].sum()) / 21, 2)
+    media_10 = round((aux.iloc[0:10][ticker].sum()) / 10, 2)
     # print(media_atual)
     # print(media_ano)
     # print(media_sem)
