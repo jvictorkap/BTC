@@ -177,7 +177,7 @@ if options == "Mapa":
 if options == "Taxa":
 
     st.write("## Taxa")
-    ticker = st.sidebar.text_input("Ticker", value="BOVA11", max_chars=6)
+    ticker = st.sidebar.text_input("Ticker", value="BOVA11", max_chars=6).upper()
     days = st.sidebar.number_input("Days", value=21, step=1, format="%i")
     start = workdays.workday(datetime.date.today(), -days, workdays.load_holidays("B3"))
 
@@ -187,7 +187,7 @@ if options == "Taxa":
 
     aux = DB.get_taxas(ano, ticker_name=ticker)
     aux = aux.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
-
+    aux=aux.sort_values(by="rptdt",ascending= False)
     media_ano = round(aux[ticker].sum() / 252, 2)
     aux_0 = aux.iloc[0:125]
     media_sem = round((aux_0[ticker].sum()) / 126, 2)
