@@ -6,28 +6,28 @@ import pandas as pd
 import workdays
 import datetime
 
-db_conn_test = psycopg2.connect(
-    host=config.DB_TESTE_HOST,
-    dbname=config.DB_TESTE_NAME,
-    user=config.DB_TESTE_USER,
-    password=config.DB_TESTE_PASS,
-)
-# cursor_test = db_conn_test.cursor(cursor_factory=psycopg2.extras.DictCursor)
+# db_conn_test = psycopg2.connect(
+#     host=config.DB_TESTE_HOST,
+#     dbname=config.DB_TESTE_NAME,
+#     user=config.DB_TESTE_USER,
+#     password=config.DB_TESTE_PASS,
+# )
+# # cursor_test = db_conn_test.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-db_conn_risk = psycopg2.connect(
-    host=config.DB_RISK_HOST,
-    dbname=config.DB_RISK_NAME,
-    user=config.DB_RISK_USER,
-    password=config.DB_RISK_PASS,
-)
-# cursor_risk = db_conn_risk.cursor(cursor_factory=psycopg2.extras.DictCursor)
+# db_conn_risk = psycopg2.connect(
+#     host=config.DB_RISK_HOST,
+#     dbname=config.DB_RISK_NAME,
+#     user=config.DB_RISK_USER,
+#     password=config.DB_RISK_PASS,
+# )
+# # cursor_risk = db_conn_risk.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-db_conn_kapv1 = psycopg2.connect(
-    host=config.DB_KAPV1_HOST,
-    dbname=config.DB_KAPV1_NAME,
-    user=config.DB_KAPV1_USER,
-    password=config.DB_KAPV1_PASS,
-)
+# db_conn_kapv1 = psycopg2.connect(
+#     host=config.DB_KAPV1_HOST,
+#     dbname=config.DB_KAPV1_NAME,
+#     user=config.DB_KAPV1_USER,
+#     password=config.DB_KAPV1_PASS,
+# )
 # cursor_kapv1 = db_conn_kapv1.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
 # db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
@@ -35,12 +35,21 @@ db_conn_kapv1 = psycopg2.connect(
 
 holidays_br = workdays.load_holidays("BR")
 holidays_b3 = workdays.load_holidays("B3")
-dt = datetime.date.today()
-dt_1 = workdays.workday(dt, -1, holidays_b3)
+# dt = datetime.date.today()
+# dt_1 = workdays.workday(dt, -1, holidays_b3)
 
 # #POSITIONS
-def get_equity_positions(dt_1):
+def get_equity_positions(dt_1=None):
+    if dt_1==None:
+        dt = datetime.date.today()
+        dt_1 = workdays.workday(dt, -1, holidays_b3)
 
+    db_conn_test = psycopg2.connect(
+        host=config.DB_TESTE_HOST,
+        dbname=config.DB_TESTE_NAME,
+        user=config.DB_TESTE_USER,
+        password=config.DB_TESTE_PASS,
+    )
     query = f"SELECT str_fundo, str_codigo, regexp_replace(str_serie,' .*',''), sum(dbl_lote) \
 				from tbl_carteira1 \
 				where dte_data='{dt_1.strftime('%Y-%m-%d')}' and str_mercado='Acao' and str_serie<>'DIVIDENDOS' AND str_fundo like 'KAPITALO KAPPA MASTER FIM%' \
@@ -51,6 +60,12 @@ def get_equity_positions(dt_1):
 
 # Movimentacoes
 def get_equity_trades(dt):
+    db_conn_test = psycopg2.connect(
+        host=config.DB_TESTE_HOST,
+        dbname=config.DB_TESTE_NAME,
+        user=config.DB_TESTE_USER,
+        password=config.DB_TESTE_PASS,
+    )
     query = f"SELECT dte_data, str_mercado, regexp_replace(str_serie,' .*','') as codigo, sum(dbl_lote) as qtd \
 				FROM tbl_auxboletas1 where str_fundo like 'KAPITALO KAPPA MASTER FIM%' AND dte_data ='{dt.strftime('%Y-%m-%d')}' AND str_mercado='Acao' \
 				AND str_corretora <>'Interna' \
@@ -60,12 +75,30 @@ def get_equity_trades(dt):
 
 
 def get_prices(dt_1):
+    if dt_1==None:
+        dt = datetime.date.today()
+        dt_1 = workdays.workday(dt, -1, holidays_b3)
+
+    
+    db_conn_kapv1 = psycopg2.connect(
+        host=config.DB_KAPV1_HOST,
+        dbname=config.DB_KAPV1_NAME,
+        user=config.DB_KAPV1_USER,
+        password=config.DB_KAPV1_PASS,
+    )
     query = f"SELECT split_part(str_serie,' ',1) , dbl_preco  FROM tbl_mtm  WHERE dte_data = '{dt_1.strftime('%Y-%m-%d')}' AND str_bolsa='BOVESPA' AND str_mercado = 'Acao'"
     df_prices = pd.read_sql(query, db_conn_kapv1)
     return df_prices
 
 
-def get_alugueis(dt_1, dt_liq):
+def get_alugueis(dt_1,dt_liq):
+
+    db_conn_risk = psycopg2.connect(
+    host=config.DB_RISK_HOST,
+    dbname=config.DB_RISK_NAME,
+    user=config.DB_RISK_USER,
+    password=config.DB_RISK_PASS,
+    )
     query = f"SELECT st_alugcustcorr.contrato, registro, corretora, st_alugcustcorr.cliente as fundo,reversor, codigo, \
 		vencimento, taxa, (avg(qtde)+ case when sum(qteliq) is null then '0' else  sum(qteliq) end) as quantidade, avg(cotliq) as preco_init, \
 		negeletr, (case when sum(qtde) < 0  then 'D' else  'T' end) as Tipo \
@@ -80,6 +113,15 @@ def get_alugueis(dt_1, dt_liq):
 
 
 def get_alugueis_boletas(dt):
+    if dt==None:
+        dt = datetime.date.today()
+        
+    db_conn_test = psycopg2.connect(
+    host=config.DB_TESTE_HOST,
+    dbname=config.DB_TESTE_NAME,
+    user=config.DB_TESTE_USER,
+    password=config.DB_TESTE_PASS,
+    )
     query = (
         f"SELECT dte_databoleta, dte_data, str_fundo, str_corretora, str_tipo, \
 				dte_datavencimento, dbl_taxa, \
@@ -94,6 +136,13 @@ def get_alugueis_boletas(dt):
 
 
 def get_recalls(dt_3):
+
+    db_conn_test = psycopg2.connect(
+    host=config.DB_TESTE_HOST,
+    dbname=config.DB_TESTE_NAME,
+    user=config.DB_TESTE_USER,
+    password=config.DB_TESTE_PASS,
+)
     query = f"""SELECT dte_databoleta, dte_data, str_corretora, str_tipo, \
 				dte_datavencimento, dbl_taxa, str_reversivel, str_papel, dbl_quantidade, \
 				str_status, int_codcontrato  FROM tbl_novasboletasaluguel \
@@ -104,7 +153,16 @@ def get_recalls(dt_3):
     return df
 
 
-def get_renovacoes(dt_next_3, dt_1):
+def get_renovacoes(dt_next_3, dt_1=None):
+    if dt_1==None:
+        dt = datetime.date.today()
+        dt_1 = workdays.workday(dt, -1, holidays_b3)
+    db_conn_risk = psycopg2.connect(
+    host=config.DB_RISK_HOST,
+    dbname=config.DB_RISK_NAME,
+    user=config.DB_RISK_USER,
+    password=config.DB_RISK_PASS,
+    )
     query = f"""SELECT registro,st_alugcustcorr.cliente, st_alugcustcorr.corretora, 'T' as Tipo, \
 				vencimento,100*taxa as Taxa, cotliq, reversor, codigo, st_alugcustcorr.contrato, \
 				((avg(qtde)+ case when sum(qteliq) is null then '0' else  sum(qteliq) end) \
@@ -133,6 +191,15 @@ def get_renovacoes(dt_next_3, dt_1):
 
 
 def get_aluguel_posrecall(dt):
+    if dt==None:
+        dt = datetime.date.today()
+    
+    db_conn_risk = psycopg2.connect(
+    host=config.DB_RISK_HOST,
+    dbname=config.DB_RISK_NAME,
+    user=config.DB_RISK_USER,
+    password=config.DB_RISK_PASS,
+    )
     query = f"""SELECT Data, Contrato, corretora, vencimento, taxa * 100, Reversor, \
 				Codigo, Qtde from st_alugcustcorr WHERE Data>='{dt.strftime('%Y-%m-%d')}' \
 				and Cliente like 'KAPITALO KAPPA MASTER FIM%' \
@@ -142,6 +209,16 @@ def get_aluguel_posrecall(dt):
 
 # TAXAS DE ALUGUEL
 def get_taxasalugueis(dt_1):
+    if dt_1==None:
+        dt = datetime.date.today()
+        dt_1 = workdays.workday(dt, -1, holidays_b3)
+    
+    db_conn_risk = psycopg2.connect(
+    host=config.DB_RISK_HOST,
+    dbname=config.DB_RISK_NAME,
+    user=config.DB_RISK_USER,
+    password=config.DB_RISK_PASS,
+    )
     query = f"SELECT rptdt, tckrsymb, sctyid, sctysrc, mktidrcd, isin, asst, qtyctrctsday, qtyshrday, \
 				valctrctsday, dnrminrate, dnravrgrate, dnrmaxrate, takrminrate, \
 				takravrgrate, takrmaxrate, mkt, mktnm, datasts \
@@ -151,7 +228,16 @@ def get_taxasalugueis(dt_1):
     return df
 
 
-def get_taxas(start, ticker_name=None, end=datetime.date.today()):
+def get_taxas(start, ticker_name=None, end=None):
+    if end==None:
+        end = datetime.date.today()
+        
+    db_conn_risk = psycopg2.connect(
+    host=config.DB_RISK_HOST,
+    dbname=config.DB_RISK_NAME,
+    user=config.DB_RISK_USER,
+    password=config.DB_RISK_PASS,
+    )
 
     if ticker_name != None:
         query = f"""SELECT rptdt, tckrsymb, sctyid, sctysrc, mktidrcd, isin, asst, qtyctrctsday, qtyshrday, valctrctsday, dnrminrate, dnravrgrate, dnrmaxrate, takrminrate, takravrgrate, takrmaxrate, mkt , mktnm, datasts \
@@ -170,6 +256,12 @@ def get_taxas(start, ticker_name=None, end=datetime.date.today()):
 
 
 def get_taxa(ticker_name, pos):
+    db_conn_risk = psycopg2.connect(
+    host=config.DB_RISK_HOST,
+    dbname=config.DB_RISK_NAME,
+    user=config.DB_RISK_USER,
+    password=config.DB_RISK_PASS,
+    )
 
     try:
         query = f"""SELECT rptdt, tckrsymb, sctyid, sctysrc, mktidrcd, isin, asst, qtyctrctsday, qtyshrday, valctrctsday, dnrminrate, dnravrgrate, dnrmaxrate, takrminrate, takravrgrate, takrmaxrate, mkt, mktnm, datasts \
@@ -194,6 +286,15 @@ def get_taxa(ticker_name, pos):
 
 
 def get_ticker(dt_1):
+    if dt_1==None:
+        dt = datetime.date.today()
+        dt_1 = workdays.workday(dt, -1, holidays_b3)
+    db_conn_risk = psycopg2.connect(
+    host=config.DB_RISK_HOST,
+    dbname=config.DB_RISK_NAME,
+    user=config.DB_RISK_USER,
+    password=config.DB_RISK_PASS,
+    )
 
     query = f"""SELECT distinct(tckrsymb) 
 	FROM b3up2data.equities_assetloanfilev2 
@@ -206,6 +307,15 @@ def get_ticker(dt_1):
 
 # OPEN POSITIONS BORROW
 def get_openpositions(dt_1):
+    if dt_1==None:
+        dt = datetime.date.today()
+        dt_1 = workdays.workday(dt, -1, holidays_b3)
+    db_conn_risk = psycopg2.connect(
+    host=config.DB_RISK_HOST,
+    dbname=config.DB_RISK_NAME,
+    user=config.DB_RISK_USER,
+    password=config.DB_RISK_PASS,
+    )
     query = f"SELECT rptdt, tckrsymb, NULL AS empresa, NULL as Tipo, isin, balqty, tradavrgpric,pricfctr, balval \
 				FROM b3up2data.equities_securitieslendingpositionfilev2 \
 				WHERE rptdt = '{dt_1.strtime('%y-%M-%d')}'"

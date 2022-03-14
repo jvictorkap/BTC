@@ -143,7 +143,7 @@ def fill_devol_doador(main_df: pd.DataFrame):
 
 
     # devol["devol_doador"] = devol["venda"]*(-1)
-    devol["devol_doador"] = devol["devol_doador"]*(-1)
+    devol["devol_doador"] = devol["devol_doador"]
     devol["quantidade"]=devol["quantidade"]*(-1)
     # devol=devol[devol['venda']!=0]
     devol=devol[devol['devol_doador']!=0]

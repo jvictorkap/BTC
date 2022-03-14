@@ -580,42 +580,66 @@ if options == "Ibovespa":
     aux = DB.get_taxas(start, ticker_name="BOVA11")
     aux = aux.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3,col4 = st.columns(4)
     col1.metric("Taxa Cateira", f"{data.ibov.loc[0,'Aluguel Carteira']}%")
     col2.metric("Taxa BOVA11", f"{aux.loc[dt_1,'BOVA11']}%")
 
-    map_aux = data.df[["codigo", "taxa_doado"]]
+    map_aux = data.df[["codigo", "taxa_doado","taxa_tomado"]]
     map_aux = map_aux.rename(columns={"codigo": "cod"})
+    
+    ibov = pd.merge(data.ibov, map_aux, on="cod", how="left")
+    
+    
+    ibov["Analise Peso x Taxa Doado"] = ibov["taxa_doado"] * ibov["part"]
+    # ibov["Analise Peso x Taxa Doado"] = ibov.apply(lambda row: row["taxa_doado"] * row["part"],axis=1)
+    ibov["Analise Peso x Taxa Tomado"] = ibov["taxa_tomado"] * ibov["part"]
 
-    data.ibov = pd.merge(data.ibov, map_aux, on="cod", how="inner")
-
-    data.ibov["Analise Peso x Taxa Doado"] = data.ibov["taxa_doado"] * data.ibov["part"]
-
-    data.ibov["Analise Peso x Taxa Doado"] = data.ibov[
+    ibov["Analise Peso x Taxa Doado"] = ibov[
         "Analise Peso x Taxa Doado"
     ].round(2)
 
-    data.ibov.loc[0, "Aluguel Carteira Kappa"] = round(
-        sum(data.ibov["Analise Peso x Taxa Doado"].tolist()) / 100, 2
+    ibov["Analise Peso x Taxa Tomado"] = ibov[
+        "Analise Peso x Taxa Tomado"
+    ].round(2)
+
+    ibov.loc[0, "Aluguel Carteira Kappa Doada"] = round(
+        sum(ibov["Analise Peso x Taxa Doado"].tolist()) / 100, 2
     )
 
-    data.ibov["percentual kappa"] = (
-        data.ibov["Analise Peso x Taxa Doado"]
-        / data.ibov.loc[0, "Aluguel Carteira Kappa"]
+    ibov.loc[0, "Aluguel Carteira Kappa Tomada"] = round(
+        sum(ibov["Analise Peso x Taxa Tomado"].tolist()) / 100, 2
     )
-    data.ibov["percentual kappa"] = data.ibov["percentual kappa"].round(2)
 
-    col3.metric("Taxa Carteira Kappa", f"{data.ibov.loc[0,'Aluguel Carteira Kappa']}%")
+    ibov["percentual kappa"] = (
+        ibov["Analise Peso x Taxa Doado"]
+        / ibov.loc[0, "Aluguel Carteira Kappa Doada"]
+    )
 
+    ibov["percentual kappa tomado"] = (
+        ibov["Analise Peso x Taxa Tomado"]
+        / ibov.loc[0, "Aluguel Carteira Kappa Tomada"]
+    )
+
+
+
+    ibov["percentual kappa"] = ibov["percentual kappa"].round(2)
+    ibov["percentual kappa tomado"] = ibov["percentual kappa tomado"].round(2)
+
+    col3.metric("Taxa Carteira Kappa Doada", f"{ibov.loc[0,'Aluguel Carteira Kappa Doada']}%")
+
+    col4.metric("Taxa Carteira Kappa Tomada", f"{ibov.loc[0,'Aluguel Carteira Kappa Tomada']}%")
+    ibov=ibov.fillna(0)
     gb = GridOptionsBuilder.from_dataframe(
-        data.ibov[
+        ibov[
             [
                 "cod",
                 "taxa",
                 "part",
                 "Analise Peso x Taxa",
                 "taxa_doado",
+                "taxa_tomado",
                 "Analise Peso x Taxa Doado",
+                "Analise Peso x Taxa Tomado"
             ]
         ]
     )
@@ -635,14 +659,16 @@ if options == "Ibovespa":
         groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True
     )
     grid_response = AgGrid(
-        data.ibov[
+        ibov[
             [
                 "cod",
                 "taxa",
                 "part",
                 "Analise Peso x Taxa",
                 "taxa_doado",
+                "taxa_tomado",
                 "Analise Peso x Taxa Doado",
+                "Analise Peso x Taxa Tomado"
             ]
         ],
         gridOptions=gridOptions,
@@ -655,25 +681,45 @@ if options == "Ibovespa":
         update_mode=GridUpdateMode.SELECTION_CHANGED,
     )
 
-    col1_p, col2_p = st.columns(2)
-
-    fig = px.pie(
-        data.ibov,
-        values="percentual",
-        names="cod",
-        title="Analise de composição carteira media",
+    select = st.sidebar.selectbox(
+        "Análise da Carteira",
+        {"Carteira Ibovespa", "Carteira Doada", "Carteira Tomada"},
     )
-    fig.update_traces(textposition="inside", textinfo="percent+label")
-    col1_p.plotly_chart(fig)
 
-    fig_kap = px.pie(
-        data.ibov,
-        values="percentual kappa",
-        names="cod",
-        title="Analise de composição carteira Kappa ",
-    )
-    fig_kap.update_traces(textposition="inside", textinfo="percent+label")
-    col2_p.plotly_chart(fig_kap)
+    # col1_p, col2_p = st.columns(2)
+    if select=="Carteira Ibovespa":
+        ibov=ibov.fillna(0)
+        print("Carteira Ibov")
+        print(ibov)
+        fig = px.pie(
+            ibov,
+            values="percentual",
+            names="cod",
+            title="Analise de composição carteira media do Ibovespa",
+        )
+        fig.update_traces(textposition="inside", textinfo="percent+label")
+        st.plotly_chart(fig)
+    elif select == "Carteira Doada":
+
+        print(ibov)
+        fig_kap = px.pie(
+            ibov,
+            values="percentual kappa",
+            names="cod",
+            title="Analise de composição carteira Kappa Doada ",
+        )
+        fig_kap.update_traces(textposition="inside", textinfo="percent+label")
+        st.plotly_chart(fig_kap)
+    else:
+        print(ibov)
+        fig_kap_t = px.pie(
+            ibov,
+            values="percentual kappa tomado",
+            names="cod",
+            title="Analise de composição carteira Kappa Tomada ",
+        )
+        fig_kap_t.update_traces(textposition="inside", textinfo="percent+label")
+        st.plotly_chart(fig_kap_t)
 
 
 if options == "BBI":

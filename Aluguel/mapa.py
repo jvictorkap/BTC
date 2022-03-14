@@ -312,18 +312,45 @@ def main():
 
 	df_recall_last.to_excel("df_recall.xlsx")
 
-	# try:
-	# 	df_recall_tomador=pd.read_excel(open('G://Trading//K11//Aluguel//Recall//RECALL_BRAD_BBI_KAPITALO_'+dt.strftime('%d%m%Y')+'.xlsx', 'rb'),
-	# 			sheet_name='Planilha1')
-	# except:
-	# 	df_recall_tomador=pd.read_excel(open('G://Trading//K11//Aluguel//Recall//RECALL_BRAD_BBI_KAPITALO_'+dt_1.strftime('%d%m%Y')+'.xlsx', 'rb'),
-	# 	sheet_name='Planilha1')
+	try:
+		df_recall_tomador=pd.read_excel(open('G://Trading//K11//Aluguel//Recall//RECALL_BRAD_BBI_KAPITALO_'+dt.strftime('%d%m%Y')+'.xlsx', 'rb'),
+				sheet_name='Planilha1')
+	except:
+		df_recall_tomador=pd.read_excel(open('G://Trading//K11//Aluguel//Recall//RECALL_BRAD_BBI_KAPITALO_'+dt_1.strftime('%d%m%Y')+'.xlsx', 'rb'),
+		sheet_name='Planilha1')
 
-	df = df.merge(
+
+	if not df_recall_tomador.empty:
+		df_recall_tomador=df_recall_tomador[df_recall_tomador['Cliente']=='KAPITALO MASTER I FUNDO DE INVESTIMENTO MULTIMERCADO']
+		
+		df_recall_tomador=pd.pivot_table(df_recall_tomador,values='Quantidade Liquidação Solicitada',index='Cód. de Neg. do Ativo Obj.',columns='Última data de liquidação')
+		df_rec=pd.DataFrame(columns=['codigo',"PendRecallD1", "PendRecallD2", "PendRecallD3"])
+		df_rec['codigo']=df_recall_tomador.index.tolist()
+		
+		df_rec['PendRecallD1']=[(-1)*x for x in df_recall_tomador[dt_next_1.strftime('%Y-%m-%d')].tolist()]
+		try:
+			df_rec['PendRecallD2']=[(-1)*x for x in df_recall_tomador[dt_next_2.strftime('%Y-%m-%d')].tolist()]
+		except:
+			df_rec['PendRecallD2']=0
+		try:
+			df_rec['PendRecallD3']=[(-1)*x for x in df_recall_tomador[dt_next_3.strftime('%Y-%m-%d')].tolist()]
+		except:
+			df_rec['PendRecallD3']=0
+		
+		df_rec=df_rec.fillna(0)
+		df_recall_g=pd.concat([df_recall_g,df_rec]).groupby(['codigo']).sum().reset_index()
+		df = df.merge(
+			df_recall_g[["codigo", "PendRecallD1", "PendRecallD2", "PendRecallD3"]],
+			on="codigo",
+			how="outer",
+		)
+		
+	else:
+		df = df.merge(
 		df_recall_g[["codigo", "PendRecallD1", "PendRecallD2", "PendRecallD3"]],
 		on="codigo",
 		how="left",
-	)
+		)
 
 	df["PendRecallD1"].fillna(0, inplace=True)
 	df["PendRecallD2"].fillna(0, inplace=True)

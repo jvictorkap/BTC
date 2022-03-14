@@ -23,7 +23,7 @@ def get_email_mirae():
 
 def get_email_bofa():
     email_gmail.get_mail_files(
-        ["eduardo.montoro@bofa.com", "leonardo.borelli@bofa.com"],
+        ["eduardo.montoro@bofa.com", "leonardo.borelli@bofa.com","guilherme.campos2@bofa.com"],
         "",
         "G://Trading//K11//Aluguel//Trades//Bofa//",
         [".xls", ".xlsm", ".xlsx"],
