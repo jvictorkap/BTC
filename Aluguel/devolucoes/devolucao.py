@@ -214,7 +214,7 @@ def fill_devol_doador(main_df: pd.DataFrame):
         inplace=True,
     )
 
-    print(devol)
+ 
     devol.to_excel("devol.xlsx")
     return devol
 
