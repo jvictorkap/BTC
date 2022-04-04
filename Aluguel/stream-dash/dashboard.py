@@ -27,6 +27,7 @@ import numpy as np
 import carteira_ibov
 import altair as alt
 import json
+import config
 import data
 from boletas.main import main as boleta_main
 from boletas.send_email import send_lend as send_email_lend
@@ -36,7 +37,10 @@ from Renovacoes import renov_new
 import pyperclip
 from BBI import get_bbi
 from plotly.subplots import make_subplots
-
+import os
+from io import StringIO
+import pymongo
+pd.options.mode.chained_assignment = None  # default='warn'
 
 from make_plots import (
     matplotlib_plot,
@@ -49,8 +53,6 @@ from make_plots import (
 
 table_subsidio = "G:\\Trading\\K11\\Aluguel\\Subsidiado\\aluguel_subsidiado.xlsx"
 
-holidays_br = workdays.load_holidays("BR")
-holidays_b3 = workdays.load_holidays("B3")
 
 brokers = {
     "Ágora",
@@ -58,7 +60,7 @@ brokers = {
     "Barclays",
     "BR Partners",
     "Bradesco",
-    "BTG",
+    "BTG Pactual",
     "CM",
     "Citi",
     "Concordia",
@@ -93,25 +95,9 @@ brokers = {
 }
 
 
-dt = datetime.date.today()
-vcto_0 = dt.strftime("%d/%m/%Y")
-dt_pos = workdays.workday(dt, -1, holidays_br)
-dt_1 = workdays.workday(dt, -1, holidays_b3)
-dt_2 = workdays.workday(dt, -2, holidays_b3)
-dt_3 = workdays.workday(dt, -3, holidays_b3)
-dt_4 = workdays.workday(dt, -4, holidays_b3)
 
-dt_next_1 = workdays.workday(dt, 1, holidays_b3)
-vcto_1 = "venc " + dt_next_1.strftime("%d/%m/%Y")
-dt_next_2 = workdays.workday(dt, 2, holidays_b3)
-vcto_2 = "venc " + dt_next_2.strftime("%d/%m/%Y")
-dt_next_3 = workdays.workday(dt, 3, holidays_b3)
-vcto_3 = "venc " + dt_next_3.strftime("%d/%m/%Y")
-dt_next_4 = workdays.workday(dt, 4, holidays_b3)
-vcto_4 = "venc " + dt_next_4.strftime("%d/%m/%Y")
-dt_next_5 = workdays.workday(dt, 5, holidays_b3)
-vcto_5 = "venc " + dt_next_5.strftime("%d/%m/%Y")
-
+holidays_br = workdays.load_holidays("BR")
+holidays_b3 = workdays.load_holidays("B3")
 
 image_path = "logo-kapitalo.png"
 
@@ -143,9 +129,13 @@ options = st.sidebar.selectbox(
 
 if options == "Mapa":
 
-    st.write("## Mapa")
+    st.write("## Mapa") 
     if st.sidebar.button("Update Database"):
+
+        dt = datetime.date.today()
+        dt_1 = workdays.workday(dt, -1, holidays_b3)
         data.df = mapa.main()
+        data.main()
 
     gb = GridOptionsBuilder.from_dataframe(data.df)
     gb.configure_default_column(
@@ -181,16 +171,14 @@ if options == "Taxa":
     st.write("## Taxa")
     ticker = st.sidebar.text_input("Ticker", value="BOVA11", max_chars=6).upper()
     days = st.sidebar.number_input("Days", value=21, step=1, format="%i")
-    start = workdays.workday(datetime.date.today(), -days, workdays.load_holidays("B3"))
-
-    df = DB.get_taxas(start, ticker_name=ticker)
+    df = DB.get_taxas(days=days,ticker_name=ticker)
     tx_df = df.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
     vol= df.pivot(index="rptdt", columns="tckrsymb", values="qtyshrday")
     vol=vol.rename(columns={ticker:"VOLUME"})
 
-    ano = workdays.workday(datetime.date.today(), -252, workdays.load_holidays("B3"))
+    # ano = workdays.workday(datetime.date.today(), -252, workdays.load_holidays("B3"))
 
-    aux = DB.get_taxas(ano, ticker_name=ticker)
+    aux = DB.get_taxas(days=252, ticker_name=ticker)
     aux = aux.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
     aux=aux.sort_values(by="rptdt",ascending= False)
     media_ano = round(aux[ticker].sum() / 252, 2)
@@ -206,7 +194,7 @@ if options == "Taxa":
     col2.metric("Media Semestral", f"{media_sem}%")
     col3.metric("Media 21 dias", f"{media_21}%")
     col4.metric("Media 10 dias", f"{media_10}%")
-    col5.metric("Taxa atual", f"{tx_df.loc[dt_1,ticker]}%")
+    col5.metric("Taxa atual", f"{tx_df.loc[data.get_dt_1(),ticker]}%")
 
 
     # plot = plotly_plot("Line", tx_df, y=ticker)
@@ -231,7 +219,9 @@ if options == "Rotina":
 
     if st.sidebar.button("Update Database"):
         dt = datetime.date.today()
+        dt_1 = workdays.workday(dt, -1, holidays_b3)
         data.df = mapa.main()
+        data.update_sub()
 
     st.title("Rotina - BTC")
     st.write("Conjunto de arquivos uteis para a rotina")
@@ -239,6 +229,7 @@ if options == "Rotina":
     st.write("## Tomar pra janela ")
 
     borrow_janela = mapa.get_borrow_janela(data.df)
+    borrow_janela = borrow_janela.rename(columns={"to_borrow_0": "Quantidade"})
 
     if borrow_janela.empty:
         st.write("Não há ativos para tomar na janela")
@@ -251,23 +242,25 @@ if options == "Rotina":
     st.write("## Tomar para o dia ")
 
     borrow_dia = mapa.get_borrow_dia(data.df)
-    borrow_sub = pd.read_excel(table_subsidio, index_col=0)
+    query="select * from aluguel_sub"
+    db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
+    borrow_sub=pd.read_sql(query, db_conn_k11)
+    
 
-    borrow_trade = pd.merge(borrow_dia, borrow_sub, on="codigo", how="inner")
+
 
     if borrow_dia.empty:
         st.write("Não há ativos para tomar para o dia")
     else:
-        if not borrow_trade.empty:
+        if not borrow_sub.empty:
 
             st.write("Ativos subsidiados disponiveis")
-            boleta = trading_sub.tabela_sub(borrow_trade)
-            st.dataframe(boleta.set_index("corretora"))
+            st.dataframe(borrow_sub.set_index("str_corretora"))
             copy_button = Button(label="Copy Table")
             copy_button.js_on_event(
                 "button_click",
                 CustomJS(
-                    args=dict(df=boleta.set_index("corretora").to_csv(sep="\t")),
+                    args=dict(df=borrow_sub.set_index("str_corretora").to_csv(sep="\t")),
                     code="""
             navigator.clipboard.writeText(df);
             """,
@@ -552,37 +545,52 @@ if options == "Taxa-Subsidio":
     ticker = st.sidebar.text_input("Codigo")
     quant = st.sidebar.number_input("Quantidade", step=1, format="%i")
     taxa = st.sidebar.number_input("Taxa (a,a)%", format="%.2f")
+
+
     vencimento = st.sidebar.date_input("Vencimento", datetime.datetime(2022, 1, 1))
-    borrow_sub = pd.read_excel(table_subsidio, index_col=0)
+    query="select * from aluguel_sub"
+    db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
+    borrow_sub=pd.read_sql(query, db_conn_k11)
+    
+    # borrow_sub = pd.read_excel(table_subsidio, index_col=0)
 
     # borrow_sub=trading_sub.del_sub(df=borrow_sub,df_boletas=data.boletas_dia)
-    borrow_sub = borrow_sub.dropna(how="all", axis=0)
+    # borrow_sub = borrow_sub.dropna(how="all", axis=0)
+
 
     if st.sidebar.button("Registrar"):
         aux_sub = {
-            "data": dt.strftime("%d/%m/%Y"),
-            "corretora": broker,
-            "codigo": ticker,
-            "quantidade": quant,
-            "taxa": taxa,
-            "vencimento": vencimento.strftime("%d/%m/%Y"),
+            "dte_data": data.get_dt().strftime("%d/%m/%Y"),
+            "str_corretora": broker,
+            "str_codigo": ticker,
+            "dbl_quantidade": quant,
+            "dbl_taxa": taxa,
+            "dte_vencimento": vencimento.strftime("%d/%m/%Y"),
         }
         borrow_sub = borrow_sub.append(aux_sub, ignore_index=True)
-        borrow_sub.to_excel(table_subsidio)
-
-    st.dataframe(borrow_sub)
-
+        cursor = db_conn_k11.cursor()
+        sio = StringIO()
+        # Write the Pandas DataFrame as a csv to the buffer
+        sio.write(borrow_sub.to_csv(index=None, header=None, sep=";"))
+        sio.seek(0)  # Be sure to reset the position to the start of the stream
+        # Copy the string buffer to the database, as if it were an actual file
+        cursor.copy_from(sio, "aluguel_sub", columns=borrow_sub.columns, sep=";")
+        db_conn_k11.commit()
+    if not borrow_sub.empty:
+        st.dataframe(borrow_sub)
+    else:
+        st.write("Nenhum registro encontrado")
 
 if options == "Ibovespa":
 
     st.write("## Ibovespa")
-    start = workdays.workday(datetime.date.today(), -3, workdays.load_holidays("B3"))
-    aux = DB.get_taxas(start, ticker_name="BOVA11")
+    # start = workdays.workday(datetime.date.today(), -3, workdays.load_holidays("B3"))
+    aux = DB.get_taxas(days=3, ticker_name="BOVA11")
     aux = aux.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
 
     col1, col2, col3,col4 = st.columns(4)
     col1.metric("Taxa Cateira", f"{data.ibov.loc[0,'Aluguel Carteira']}%")
-    col2.metric("Taxa BOVA11", f"{aux.loc[dt_1,'BOVA11']}%")
+    col2.metric("Taxa BOVA11", f"{aux.loc[data.get_dt_1(),'BOVA11']}%")
 
     map_aux = data.df[["codigo", "taxa_doado","taxa_tomado"]]
     map_aux = map_aux.rename(columns={"codigo": "cod"})
@@ -689,8 +697,8 @@ if options == "Ibovespa":
     # col1_p, col2_p = st.columns(2)
     if select=="Carteira Ibovespa":
         ibov=ibov.fillna(0)
-        print("Carteira Ibov")
-        print(ibov)
+
+
         fig = px.pie(
             ibov,
             values="percentual",
@@ -701,7 +709,7 @@ if options == "Ibovespa":
         st.plotly_chart(fig)
     elif select == "Carteira Doada":
 
-        print(ibov)
+
         fig_kap = px.pie(
             ibov,
             values="percentual kappa",
@@ -711,7 +719,7 @@ if options == "Ibovespa":
         fig_kap.update_traces(textposition="inside", textinfo="percent+label")
         st.plotly_chart(fig_kap)
     else:
-        print(ibov)
+
         fig_kap_t = px.pie(
             ibov,
             values="percentual kappa tomado",
