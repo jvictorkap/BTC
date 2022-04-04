@@ -13,7 +13,7 @@ from zeep.transports import Transport
 import workdays
 import warnings
 
-
+warnings.filterwarnings("ignore")
 ACCOUNT = "270366"
 USERNAME = "kap_wsrv"
 PASSWORD = "kjkOpL%*67Fg1!*%"
@@ -76,7 +76,7 @@ def importa_renovacoes_aluguel_bbi():
 
 def importa_trades_bbi():
 
-    try:
+    # try:
         session = Session()
         session.verify = False
         transport = Transport(session=session)
@@ -113,11 +113,11 @@ def importa_trades_bbi():
                 "%Y-%m-%d"
             )
         )
-
+        trades_bbi=trades_bbi.groupby(["codcli",'nmcorret', "datavenc",'codneg','taxa','preco','tipo','dataaber'],as_index=False).sum()
         return trades_bbi
-    except: 
-        trades_bbi=pd.DataFrame()
-        return trades_bbi
+    # except: 
+    #     trades_bbi=pd.DataFrame()
+    #     return trades_bbi
 
 # df = importa_trades_bbi()
 # df.to_excel("teste.xlsx")

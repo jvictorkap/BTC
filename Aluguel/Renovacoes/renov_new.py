@@ -39,7 +39,7 @@ dt_next_5 = workdays.workday(dt, 5, holidays_b3)
 vcto_5 = "venc " + dt_next_5.strftime("%d/%m/%Y")
 
 
-df_renovacao = DB.get_renovacoes(dt_next_3, dt_1)
+df_renovacao = DB.get_renovacoes()
 df_renovacao.rename(columns={"tipo": "str_tipo"}, inplace=True)
 df_mapa = mapa.get_map_renov(emprestimo.main_df)
 # df_renovacao=df_renovacao[df_renovacao[['saldo']!=0]]

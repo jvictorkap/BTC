@@ -45,6 +45,7 @@ def parse_excel_ubs(file_path):
     df.fillna(0, inplace=True)
     df = df[df["str_tipo"] != 0]
     df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
+    df['str_datavencimento'] = df['str_datavencimento'].apply(lambda x: datetime.strptime(x.strftime('%Y-%m-%d'), '%Y-%m-%d').strftime('%Y-%m-%d'))
     df["str_corretora"] = "Link"
     df["str_tipo_registro"] = df["modalidade"].apply(
         lambda x: "R" if x == "BALCAO" else "N" if x == "D+1" else None
@@ -65,20 +66,21 @@ def parse_excel_ubs(file_path):
         axis=1,
     )
 
+
     return df[
-        [
+            "dte_databoleta",
+            "dte_data",
             "str_fundo",
             "str_corretora",
             "str_tipo",
             "dte_datavencimento",
             "dbl_taxa",
             "str_reversivel",
+            "str_papel",
+            "dbl_quantidade",
             "str_tipo_registro",
             "str_modalidade",
             "str_tipo_comissao",
             "dbl_valor_fixo_comissao",
-            "str_papel",
-            "dbl_quantidade",
             "str_status",
-        ]
     ]

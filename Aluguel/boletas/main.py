@@ -13,7 +13,7 @@ import workdays
 import psycopg2
 import check_boletas
 import pandas as pd
-
+from boletador import input_data
 
 brokers = [
     "Bofa",
@@ -83,7 +83,7 @@ def main(broker, type, get_email=True):
 
         df = itau.parse_excel_itau(file_path)
 
-    elif broker == "BTG":
+    elif broker == "BTG Pactual":
 
         df = btg.parse_excel_BTG(file_path)
 
@@ -117,7 +117,7 @@ def main(broker, type, get_email=True):
         os.mkdir(f"G://Trading//K11//Aluguel//Controle//{today.strftime('%d-%m-%Y')}")
         df.to_excel(output_file_path)
 
-    # input_data(df)
+    input_data(df)
 
     return f"{broker}\n Trading loaded, check G://Trading//K11//Aluguel//Controle///{broker}_{type}_{today.strftime('%Y%m%d')}.xlsx."
 

@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import carteira_ibov
 import taxas
-
+pd.options.mode.chained_assignment = None  # default='warn'
 #
 
 
@@ -322,12 +322,18 @@ def main():
 
 	if not df_recall_tomador.empty:
 		df_recall_tomador=df_recall_tomador[df_recall_tomador['Cliente']=='KAPITALO MASTER I FUNDO DE INVESTIMENTO MULTIMERCADO']
+
 		
-		df_recall_tomador=pd.pivot_table(df_recall_tomador,values='Quantidade Liquidação Solicitada',index='Cód. de Neg. do Ativo Obj.',columns='Última data de liquidação')
+		df_recall_tomador=df_recall_tomador[['Cód. de Neg. do Ativo Obj.','Quantidade Liquidação Solicitada','Última data de liquidação']]
+		df_recall_tomador=pd.pivot_table(df_recall_tomador,values='Quantidade Liquidação Solicitada',index='Cód. de Neg. do Ativo Obj.',columns='Última data de liquidação',aggfunc=np.sum)
+		
 		df_rec=pd.DataFrame(columns=['codigo',"PendRecallD1", "PendRecallD2", "PendRecallD3"])
-		df_rec['codigo']=df_recall_tomador.index.tolist()
 		
-		df_rec['PendRecallD1']=[(-1)*x for x in df_recall_tomador[dt_next_1.strftime('%Y-%m-%d')].tolist()]
+		df_rec['codigo']=df_recall_tomador.index.tolist()
+		try:
+			df_rec['PendRecallD1']=[(-1)*x for x in df_recall_tomador[dt_next_1.strftime('%Y-%m-%d')].tolist()]
+		except:
+			df_rec['PendRecallD1']=0
 		try:
 			df_rec['PendRecallD2']=[(-1)*x for x in df_recall_tomador[dt_next_2.strftime('%Y-%m-%d')].tolist()]
 		except:
@@ -336,7 +342,7 @@ def main():
 			df_rec['PendRecallD3']=[(-1)*x for x in df_recall_tomador[dt_next_3.strftime('%Y-%m-%d')].tolist()]
 		except:
 			df_rec['PendRecallD3']=0
-		
+
 		df_rec=df_rec.fillna(0)
 		df_recall_g=pd.concat([df_recall_g,df_rec]).groupby(['codigo']).sum().reset_index()
 		df = df.merge(
@@ -549,8 +555,9 @@ def map(df):
 	]
 
 
-if __name__ == "__main__":
-	main()
+# if __name__ == "__main__":
+	
+# 	# main()
 
 
 ###

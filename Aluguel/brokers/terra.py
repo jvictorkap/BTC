@@ -42,20 +42,22 @@ def parse_excel_terra(file_path):
     df["str_tipo"] = "D"
     df["dbl_quantidade"] = df["dbl_quantidade"].apply(lambda x: x * (-1))
 
+
     return df[
-        [
+            "dte_databoleta",
+            "dte_data",
             "str_fundo",
             "str_corretora",
             "str_tipo",
             "dte_datavencimento",
             "dbl_taxa",
             "str_reversivel",
+            "str_papel",
+            "dbl_quantidade",
             "str_tipo_registro",
             "str_modalidade",
             "str_tipo_comissao",
             "dbl_valor_fixo_comissao",
-            "str_papel",
-            "dbl_quantidade",
             "str_status",
-        ]
     ]
+

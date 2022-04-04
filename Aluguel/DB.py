@@ -153,10 +153,13 @@ def get_recalls(dt_3):
     return df
 
 
-def get_renovacoes(dt_next_3, dt_1=None):
+def get_renovacoes(dt_next_3=None, dt_1=None):
     if dt_1==None:
         dt = datetime.date.today()
-        dt_1 = workdays.workday(dt, -1, holidays_b3)
+        # dt_1 = workdays.workday(dt, -1, holidays_b3)
+        dt_1=dt
+    if dt_next_3==None:
+        dt_next_3=workdays.workday(dt, +3, holidays_b3)
     db_conn_risk = psycopg2.connect(
     host=config.DB_RISK_HOST,
     dbname=config.DB_RISK_NAME,
@@ -228,10 +231,11 @@ def get_taxasalugueis(dt_1):
     return df
 
 
-def get_taxas(start, ticker_name=None, end=None):
+def get_taxas(days, ticker_name=None, end=None):
+
     if end==None:
         end = datetime.date.today()
-        
+    start = workdays.workday(end, -days, workdays.load_holidays("B3"))
     db_conn_risk = psycopg2.connect(
     host=config.DB_RISK_HOST,
     dbname=config.DB_RISK_NAME,

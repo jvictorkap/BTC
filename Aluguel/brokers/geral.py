@@ -36,9 +36,10 @@ def parse_excel_geral(file_path):
     ).strftime("%d/%m/%Y")
     df["str_status"] = "Emprestimo"
 
+
     return df[
-        [
             "dte_databoleta",
+            "dte_data",
             "str_fundo",
             "str_corretora",
             "str_tipo",
@@ -47,11 +48,10 @@ def parse_excel_geral(file_path):
             "str_reversivel",
             "str_papel",
             "dbl_quantidade",
-            "int_codcontrato",
             "str_tipo_registro",
             "str_modalidade",
             "str_tipo_comissao",
             "dbl_valor_fixo_comissao",
             "str_status",
-        ]
     ]
+

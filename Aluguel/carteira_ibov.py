@@ -3,7 +3,7 @@ import pandas as pd
 import datetime
 import urllib3
 import DB
-
+pd.options.mode.chained_assignment = None  # default='warn'
 
 urllib3.disable_warnings()
 

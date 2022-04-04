@@ -41,20 +41,21 @@ def parse_excel_modal(file_path):
     df["str_status"] = "Emprestimo"
     df['dbl_taxa']=df['dbl_taxa']*100
     df['dbl_quantidade']=-df['dbl_quantidade']
+
     return df[
-        [
+            "dte_databoleta",
+            "dte_data",
             "str_fundo",
             "str_corretora",
             "str_tipo",
             "dte_datavencimento",
             "dbl_taxa",
             "str_reversivel",
+            "str_papel",
+            "dbl_quantidade",
             "str_tipo_registro",
             "str_modalidade",
             "str_tipo_comissao",
             "dbl_valor_fixo_comissao",
-            "str_papel",
-            "dbl_quantidade",
             "str_status",
-        ]
     ]

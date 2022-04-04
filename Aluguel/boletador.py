@@ -10,9 +10,15 @@ import sys
 sys.path.append("..")
 import taxas
 import trunc
-import renovacoes
 import psycopg2
 import DB
+import locale
+import os
+from io import StringIO
+import pymongo
+pd.options.mode.chained_assignment = None  # default='warn'
+
+
 
 holidays_br = workdays.load_holidays("BR")
 holidays_b3 = workdays.load_holidays("B3")
@@ -52,29 +58,39 @@ def single_insert(conn, insert_req):
     cursor.close()
 
 
-boleta_renov = renovacoes.get_renov_boleta()
 
-for i in boleta_renov.index:
-    query = """INSERT INTO tbl_novasboletasaluguel(dte_databoleta, dte_data, str_fundo, str_corretora, str_tipo, dte_datavencimento,dbl_taxa, str_reversivel, str_papel, dbl_quantidade, str_tipo_registro, str_modalidade, str_tipo_comissao, dbl_valor_fixo_comissao, str_status)/
-    VALUES{'%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s'}""" % (
-        boleta_renov["registro"],
-        boleta_renov["cliente"],
-        boleta_renov["corretora"],
-        boleta_renov["tipo"],
-        boleta_renov["vencimento"],
-        boleta_renov["taxa"],
-        boleta_renov["cotliq"],
-        boleta_renov["reversor"],
-        boleta_renov["codigo"],
-        boleta_renov["contrato"],
-        boleta_renov["saldo"],
-        boleta_renov["Quantidade"],
-        boleta_renov["taxa final"],
-        boleta_renov["Vencimento"],
-        boleta_renov["Troca?"],
-        boleta_renov["tipo_registro"],
-        boleta_renov["Modalidade"],
-        boleta_renov["Tipo de Comissão"],
-        boleta_renov["Valor fixo com"],
-    )
-    single_insert(DB.db_conn_risk, query)
+# def input_data(df):
+#     for index,row in df.iterrows():
+#         query = """INSERT INTO tbl_novasboletasaluguel(dte_databoleta, dte_data, str_fundo, str_corretora, str_tipo, dte_datavencimento,dbl_taxa, str_reversivel, str_papel, dbl_quantidade, str_tipo_registro, str_modalidade, str_tipo_comissao, dbl_valor_fixo_comissao, str_status)/
+#         VALUES{'%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s'}""" % (
+#             row["dte_databoleta"],
+#             row["dte_data"],
+#             row["str_fundo"],
+#             row["str_corretora"],
+#             row["str_tipo"],
+#             row["dte_datavencimento"],
+#             row["dbl_taxa"],
+#             row["str_reversivel"],
+#             row["str_papel"],
+#             row["dbl_quantidade"],
+#             row["str_tipo_registro"],
+#             row["str_modalidade"],
+#             row["str_tipo_comissao"],
+#             row["dbl_valor_fixo_comissao"],
+#             row["str_status"],
+#         )
+#         single_insert(DB.db_conn_test, query)
+
+
+
+def input_data(df):
+    
+        cursor = DB.db_conn_test.cursor()
+        sio = StringIO()
+        # Write the Pandas DataFrame as a csv to the buffer
+        sio.write(df.to_csv(index=None, header=None, sep=";"))
+        sio.seek(0)  # Be sure to reset the position to the start of the stream
+
+        # Copy the string buffer to the database, as if it were an actual file
+        cursor.copy_from(sio, "tbl_novasboletasaluguel", columns=df.columns, sep=";")
+        DB.db_conn_test.commit()
