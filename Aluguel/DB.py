@@ -326,3 +326,15 @@ def get_openpositions(dt_1):
 
     df = pd.read_sql(query, db_conn_risk)
     return df
+def single_insert(conn, insert_req):
+    """Execute a single INSERT request"""
+    cursor = conn.cursor()
+    try:
+        cursor.execute(insert_req)
+        conn.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print("Error: %s" % error)
+        conn.rollback()
+        cursor.close()
+        return 1
+    cursor.close()

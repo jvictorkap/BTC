@@ -40,7 +40,7 @@ def parse_excel_BTG(file_path):
     except:
         # df['dte_datavencimento']=df['dte_datavencimento'].apply(lambda x: datetime.strptime(datetime.timestamp(str(x)),'%d-%m-%Y'))
         df["dte_datavencimento"] = df["dte_datavencimento"].apply(
-            lambda x: pd.to_datetime(x, "%d/%m/%Y")
+            lambda x: pd.to_datetime(x, "%Y-%m-%d")
         )
     df["str_tipo_registro"] = df["Modalidade"].apply(
         lambda x: "R" if x == "BALCAO" else "N" if x == "D1" else None
@@ -60,8 +60,9 @@ def parse_excel_BTG(file_path):
         else row["dbl_quantidade"],
         axis=1,
     )
-
-    return df[
+    df["dte_databoleta"] = date.today().strftime("%Y-%m-%d")
+    df["dte_data"] = date.today().strftime("%Y-%m-%d")
+    return df[[
             "dte_databoleta",
             "dte_data",
             "str_fundo",
@@ -77,4 +78,4 @@ def parse_excel_BTG(file_path):
             "str_tipo_comissao",
             "dbl_valor_fixo_comissao",
             "str_status",
-    ]
+    ]]

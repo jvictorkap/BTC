@@ -32,7 +32,7 @@ brokers = [
 type = ["trade", "loan", "borrow"]
 
 
-def main(broker, type, get_email=True):
+def main(broker, type, get_email=False):
 
     today = workdays.workday(date.today(), 0, workdays.load_holidays())
 
@@ -43,8 +43,8 @@ def main(broker, type, get_email=True):
     print(str(file_path))
     print(f"Working with {broker}")
 
-    if get_email:
-        eval(f"get_email_aluguel.get_email_{broker.lower()}()")
+    # if get_email:
+    #     eval(f"get_email_aluguel.get_email_{broker.lower()}()")
 
     if os.path.exists(file_path + ".xlsx"):
         file_path += ".xlsx"
@@ -83,7 +83,7 @@ def main(broker, type, get_email=True):
 
         df = itau.parse_excel_itau(file_path)
 
-    elif broker == "BTG Pactual":
+    elif broker == "BTG":
 
         df = btg.parse_excel_BTG(file_path)
 
@@ -117,7 +117,7 @@ def main(broker, type, get_email=True):
         os.mkdir(f"G://Trading//K11//Aluguel//Controle//{today.strftime('%d-%m-%Y')}")
         df.to_excel(output_file_path)
 
-    input_data(df)
+    # input_data(df)
 
     return f"{broker}\n Trading loaded, check G://Trading//K11//Aluguel//Controle///{broker}_{type}_{today.strftime('%Y%m%d')}.xlsx."
 
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--broker", type=str, choices=brokers, help="Choose broker")
     parser.add_argument("--type", type=str, default="trade")
-    parser.add_argument("--email", type=bool, default=True)
+    parser.add_argument("--email", type=bool, default=False)
     args = parser.parse_args()
     broker = args.broker
 

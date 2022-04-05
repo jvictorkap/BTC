@@ -16,6 +16,7 @@ import locale
 import os
 from io import StringIO
 import pymongo
+import config
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
@@ -85,7 +86,13 @@ def single_insert(conn, insert_req):
 
 def input_data(df):
     
-        cursor = DB.db_conn_test.cursor()
+        db_conn_test = psycopg2.connect(
+            host=config.DB_TESTE_HOST,
+            dbname=config.DB_TESTE_NAME,
+            user=config.DB_TESTE_USER,
+            password=config.DB_TESTE_PASS,
+        )
+        cursor = db_conn_test.cursor()
         sio = StringIO()
         # Write the Pandas DataFrame as a csv to the buffer
         sio.write(df.to_csv(index=None, header=None, sep=";"))
@@ -93,4 +100,4 @@ def input_data(df):
 
         # Copy the string buffer to the database, as if it were an actual file
         cursor.copy_from(sio, "tbl_novasboletasaluguel", columns=df.columns, sep=";")
-        DB.db_conn_test.commit()
+        db_conn_test.commit()

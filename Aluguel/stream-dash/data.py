@@ -15,7 +15,7 @@ import workdays
 import psycopg2
 import pandas as pd
 import config
-
+pd.options.mode.chained_assignment = None  # default='warn'
 df = mapa.main()
 devol = fill_devol(df)
 devol_doador=fill_devol_doador(df)
@@ -107,7 +107,7 @@ def update_sub():
     boletas=boletas[['str_corretora','dbl_taxa','str_papel','dbl_quantidade','dte_datavencimento']]
     boletas=boletas.rename(columns={'str_papel':'str_codigo','dte_datavencimento':'dte_vencimento'})
 
-    trade=boletas.merge(borrow_sub,how='left',on=['str_corretora','dbl_taxa','str_codigo','dbl_quantidade','dte_vencimento'])
+    trade=boletas.merge(borrow_sub,how='inner',on=['str_corretora','dbl_taxa','str_codigo','dbl_quantidade','dte_vencimento'])
     if not trade.empty:
         for index, row in trade.iterrows():
 
@@ -117,6 +117,7 @@ def update_sub():
             db_conn_k11.commit()
             print("Delete trading from aluguel_sub")
             print(trade.iloc[index])
+
 
 
 # if __name__ =='__main__':

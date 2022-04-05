@@ -53,7 +53,7 @@ from make_plots import (
 
 table_subsidio = "G:\\Trading\\K11\\Aluguel\\Subsidiado\\aluguel_subsidiado.xlsx"
 
-
+aux_sub=pd.DataFrame(columns=['str_corretora','dbl_taxa','str_codigo','dbl_quantidade','dte_vencimento','dte_data'])
 brokers = {
     "Ágora",
     "Ativa",
@@ -545,8 +545,6 @@ if options == "Taxa-Subsidio":
     ticker = st.sidebar.text_input("Codigo")
     quant = st.sidebar.number_input("Quantidade", step=1, format="%i")
     taxa = st.sidebar.number_input("Taxa (a,a)%", format="%.2f")
-
-
     vencimento = st.sidebar.date_input("Vencimento", datetime.datetime(2022, 1, 1))
     query="select * from aluguel_sub"
     db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
@@ -559,23 +557,23 @@ if options == "Taxa-Subsidio":
 
 
     if st.sidebar.button("Registrar"):
-        aux_sub = {
-            "dte_data": data.get_dt().strftime("%d/%m/%Y"),
-            "str_corretora": broker,
-            "str_codigo": ticker,
-            "dbl_quantidade": quant,
-            "dbl_taxa": taxa,
-            "dte_vencimento": vencimento.strftime("%d/%m/%Y"),
-        }
-        borrow_sub = borrow_sub.append(aux_sub, ignore_index=True)
-        cursor = db_conn_k11.cursor()
-        sio = StringIO()
-        # Write the Pandas DataFrame as a csv to the buffer
-        sio.write(borrow_sub.to_csv(index=None, header=None, sep=";"))
-        sio.seek(0)  # Be sure to reset the position to the start of the stream
-        # Copy the string buffer to the database, as if it were an actual file
-        cursor.copy_from(sio, "aluguel_sub", columns=borrow_sub.columns, sep=";")
-        db_conn_k11.commit()
+
+        # aux_sub.append({'str_corretora':broker,'dbl_taxa':taxa,'str_codigo':ticker,'dbl_quantidade':quant,'dte_vencimento':vencimento,'dte_data':data.get_dt().strftime("%d/%m/%Y") }, ignore_index=True)
+
+        # # aux_sub.loc[:,"dte_data"] = data.get_dt().strftime("%d/%m/%Y")   
+        # # aux_sub.loc[:, "str_corretora"] = broker
+        # # aux_sub.loc[:, "dbl_taxa"] = taxa
+        # # aux_sub.loc[:, "str_codigo"] = ticker
+        # # aux_sub.loc[:, "dbl_quantidade"] = quant
+        # # aux_sub.loc[:, "dte_vencimento"] = vencimento.strftime("%d/%m/%Y")
+
+        query_up = """INSERT INTO aluguel_sub(str_corretora,dbl_taxa,str_codigo,dbl_quantidade,dte_vencimento,dte_data) VALUES ('%s','%s','%s','%s','%s','%s')""" % (
+            str(broker), taxa, ticker, quant, vencimento, data.get_dt().strftime("%d/%m/%Y"),
+        )
+        DB.single_insert(db_conn_k11, query_up)
+
+
+
     if not borrow_sub.empty:
         st.dataframe(borrow_sub)
     else:
