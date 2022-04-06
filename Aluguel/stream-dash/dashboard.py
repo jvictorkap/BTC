@@ -568,7 +568,7 @@ if options == "Taxa-Subsidio":
         # # aux_sub.loc[:, "dte_vencimento"] = vencimento.strftime("%d/%m/%Y")
 
         query_up = """INSERT INTO aluguel_sub(str_corretora,dbl_taxa,str_codigo,dbl_quantidade,dte_vencimento,dte_data) VALUES ('%s','%s','%s','%s','%s','%s')""" % (
-            str(broker), taxa, ticker, quant, vencimento, data.get_dt().strftime("%d/%m/%Y"),
+            str(broker), taxa, str(ticker).upper(), quant, vencimento, data.get_dt().strftime("%d/%m/%Y"),
         )
         DB.single_insert(db_conn_k11, query_up)
 
