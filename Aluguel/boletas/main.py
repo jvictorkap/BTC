@@ -23,7 +23,7 @@ brokers = [
     "CM",
     "UBS",
     "Itau",
-    "BTG",
+    "BTG Pactual",
     "Terra",
     "Santander",
     "Modal",
@@ -83,7 +83,7 @@ def main(broker, type, get_email=False):
 
         df = itau.parse_excel_itau(file_path)
 
-    elif broker == "BTG":
+    elif broker == "BTG Pactual":
 
         df = btg.parse_excel_BTG(file_path)
 
