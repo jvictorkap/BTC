@@ -60,7 +60,7 @@ brokers = {
     "Barclays",
     "BR Partners",
     "Bradesco",
-    "BTG Pactual",
+    "BTG",
     "CM",
     "Citi",
     "Concordia",
@@ -203,14 +203,32 @@ if options == "Taxa":
     
     fig = make_subplots(specs=[[{'secondary_y':True}]])
     
-
-
-    
-    
     fig.add_trace(go.Bar(x=vol.index,y=vol['VOLUME'].tolist(),name='Volume'),secondary_y=False)
     fig.add_trace(go.Scatter(x=tx_df.index,y=tx_df[ticker].tolist(),name='Taxa'),secondary_y=True)
 
     st.plotly_chart(fig, use_container_width=True)
+
+
+    st.write("## Negócio a Negócio")
+    ##Real time
+
+    url = f"https://arquivos.b3.com.br/apinegocios/tickerbtb/{ticker}/{data.get_dt().strftime('%Y-%m-%d')}"
+    response = requests.get(url)
+    operations = response.json()
+    df=pd.DataFrame(operations['values'],columns=['ticker','qtd','rate','id','type','dt','hour'])
+    df=df[df['type']==91]
+    avg_real=round((df['qtd']*(1+df['rate'])).sum()/df['qtd'].sum()-1,3)
+
+    st.write(f"Taxa Média dos Negócios: {avg_real}%")
+    df=df[['hour','rate','qtd']].sort_values(by='hour',ascending=True)
+    real = make_subplots(specs=[[{'secondary_y':True}]])
+
+    real.add_trace(go.Bar(x=df['hour'].tolist(),y=df['qtd'].tolist(),name='qtde'),secondary_y=False)
+    real.add_trace(go.Scatter(x=df['hour'].tolist(),y=df['rate'].tolist(),name='Taxa'),secondary_y=True)
+    st.plotly_chart(real, use_container_width=True)
+
+
+
 
 
 if options == "Rotina":

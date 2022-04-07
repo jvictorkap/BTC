@@ -23,7 +23,7 @@ brokers = [
     "CM",
     "UBS",
     "Itau",
-    "BTG Pactual",
+    "BTG",
     "Terra",
     "Santander",
     "Modal",
@@ -32,7 +32,7 @@ brokers = [
 type = ["trade", "loan", "borrow"]
 
 
-def main(broker, type, get_email=False):
+def main(broker, type, get_email=True):
 
     today = workdays.workday(date.today(), 0, workdays.load_holidays())
 
@@ -43,8 +43,8 @@ def main(broker, type, get_email=False):
     print(str(file_path))
     print(f"Working with {broker}")
 
-    # if get_email:
-    #     eval(f"get_email_aluguel.get_email_{broker.lower()}()")
+    if get_email:
+        eval(f"get_email_aluguel.get_email_{broker.lower()}()")
 
     if os.path.exists(file_path + ".xlsx"):
         file_path += ".xlsx"
