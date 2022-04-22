@@ -1,9 +1,12 @@
+from sched import scheduler
 import sys
 from typing import Optional
 
 from matplotlib.pyplot import axis
 
 sys.path.append("..")
+
+
 from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
 from st_aggrid.shared import GridUpdateMode
 import streamlit as st
@@ -122,7 +125,7 @@ st.sidebar.write("Options")
 
 options = st.sidebar.selectbox(
     "Which Dashboard?",
-    {"Rotina", "Mapa", "Taxa", "Boletador", "Taxa-Subsidio", "Ibovespa", "BBI"},
+    {"Rotina", "Mapa", "Taxa", "Boletador", "Taxa-Subsidio", "Ibovespa", "BBI","Simulação"},
 )
 
 # st.header(options)
@@ -221,6 +224,7 @@ if options == "Taxa":
 
     st.write(f"Taxa Média dos Negócios: {avg_real}%")
     df=df[['hour','rate','qtd']].sort_values(by='hour',ascending=True)
+    # df['hour']=df['hour'].apply(lambda x: datetime.datetime.strptime(x,'%H:%M:%S'))
     real = make_subplots(specs=[[{'secondary_y':True}]])
 
     real.add_trace(go.Bar(x=df['hour'].tolist(),y=df['qtd'].tolist(),name='qtde'),secondary_y=False)
@@ -524,7 +528,7 @@ if options == "Boletador":
         if st.sidebar.button("Boletar"):
             st.write(boleta_main(broker=corretora, type="trade"))
     if st.sidebar.button("Importa boletas"):
-        data.boletas_dia = DB.get_alugueis_boletas(dt)
+        data.boletas_dia = DB.get_alugueis_boletas(data.get_dt())
 
     st.write("## Boletas do dia")
 
@@ -560,6 +564,8 @@ if options == "Boletador":
 if options == "Taxa-Subsidio":
     st.write(options)
     broker = st.sidebar.selectbox("Broker", brokers)
+    if broker =='BTG':
+        broker='BTG Pactual'
     ticker = st.sidebar.text_input("Codigo")
     quant = st.sidebar.number_input("Quantidade", step=1, format="%i")
     taxa = st.sidebar.number_input("Taxa (a,a)%", format="%.2f")
@@ -833,3 +839,22 @@ if options == "BBI":
             theme="blue",
             update_mode=GridUpdateMode.SELECTION_CHANGED,
         )
+if options =="Simulação":
+
+    quant = st.sidebar.number_input("Quantidade", step=1, format="%i")
+
+    taxa = st.sidebar.number_input("Taxa (a,a)%", format="%.2f")
+    price = st.sidebar.number_input("Preço", format="%.2f")
+    days=st.sidebar.number_input("Dias", step=1, format="%i")
+    cdi=11.65/100
+
+
+    # vencimento = st.sidebar.date_input("Vencimento", datetime.datetime(2022, 1, 1))
+    st.write("## Simulação")
+
+    st.write(f"### cdi: {cdi*100}%")
+    if st.sidebar.button("Simular"):
+        st.write(f"### Notional: {quant*price}")
+        st.write(f"### Resultado: {round(quant*price*(((1+taxa)**(days/252))-1),2)}")
+
+

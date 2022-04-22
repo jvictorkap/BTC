@@ -43,8 +43,9 @@ def parse_excel_orama(file_path):
     df["str_status"] = "Emprestimo"
     df["str_tipo"] = "D"
     df["dbl_quantidade"] = df["dbl_quantidade"] * (-1)
-
-    return df[
+    df["dte_databoleta"] = date.today().strftime("%Y-%m-%d")
+    df["dte_data"] = date.today().strftime("%Y-%m-%d")
+    return df[[
             "dte_databoleta",
             "dte_data",
             "str_fundo",
@@ -60,7 +61,8 @@ def parse_excel_orama(file_path):
             "str_tipo_comissao",
             "dbl_valor_fixo_comissao",
             "str_status",
-    ]
+    ]]
+
 
 
 def parse_excel_renov_orama(file_path):

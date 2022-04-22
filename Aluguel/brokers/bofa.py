@@ -21,13 +21,15 @@ def parse_excel_bofa(file_path):
 
     df.columns = df.iloc[0]
     df.columns.values[13] = "tipo_registro"
-
+    df.columns.values[14] = "hour"
     # df.rename(columns={: 'tipo_registro'},inplace=True)
     df = df.drop([17, 18, 19, 20])
     df = df[
-        ["Ticker", "Quantity", "Maturity", "Rate", "Callable", "Type", "tipo_registro"]
+        ["Ticker", "Quantity", "Maturity", "Rate", "Callable", "Type", "tipo_registro","Side",'hour']
     ]
 
+    df=df[df['Side']!="Renewal"]
+    df=df[df['hour']!="N"]
     df["dte_datavencimento"] = df["Maturity"]
     df["dbl_taxa"] = df["Rate"].astype(float)
     df["str_papel"] = df["Ticker"]
@@ -63,8 +65,11 @@ def parse_excel_bofa(file_path):
     df["str_status"] = "Emprestimo"
     df["int_codcontrato"] = None
     # df.to_excel('test_bofa.xlsx')
+    df["dte_databoleta"] = date.today().strftime("%Y-%m-%d")
+    df["dte_data"] = date.today().strftime("%Y-%m-%d")
 
-    return df[
+
+    return df[[
             "dte_databoleta",
             "dte_data",
             "str_fundo",
@@ -73,11 +78,11 @@ def parse_excel_bofa(file_path):
             "dte_datavencimento",
             "dbl_taxa",
             "str_reversivel",
-            "str_papel",
-            "dbl_quantidade",
             "str_tipo_registro",
             "str_modalidade",
             "str_tipo_comissao",
             "dbl_valor_fixo_comissao",
+            "str_papel",
+            "dbl_quantidade",                  
             "str_status",
-    ]
+    ]]

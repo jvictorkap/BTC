@@ -8,7 +8,7 @@ import argparse
 import os
 from datetime import datetime, timedelta, date
 import get_email_aluguel
-from brokers import mirae, bofa, orama, ubs, itau, btg,modal, terra, santander, cm,safra
+from brokers import mirae, bofa, orama, ubs, itau, btg,modal, terra, santander, cm,safra,ativa,credit
 import workdays
 import psycopg2
 import check_boletas
@@ -27,13 +27,16 @@ brokers = [
     "Terra",
     "Santander",
     "Modal",
-    "Safra"
+    "Safra",
+    "Ativa",
 ]
 type = ["trade", "loan", "borrow"]
 
 
 def main(broker, type, get_email=True):
 
+    if broker=='Credit-Suisse':
+        broker='Credit'
     today = workdays.workday(date.today(), 0, workdays.load_holidays())
 
     directory = "G://Trading//K11//Aluguel//Trades//"
@@ -83,7 +86,7 @@ def main(broker, type, get_email=True):
 
         df = itau.parse_excel_itau(file_path)
 
-    elif broker == "BTG Pactual":
+    elif broker == "BTG":
 
         df = btg.parse_excel_BTG(file_path)
 
@@ -99,7 +102,14 @@ def main(broker, type, get_email=True):
         df = modal.parse_excel_modal(file_path)
     elif broker == "Modal":
 
-        df = safra.parse_excel_safra(file_path)
+        df = modal.parse_excel_modal(file_path)
+
+    elif broker == "Ativa":
+
+        df = ativa.parse_excel_ativa(file_path)
+    elif broker == "Credit":
+        df = credit.parse_excel_credit(file_path)
+
     else:
         return f"No automation ready to {broker}"
 

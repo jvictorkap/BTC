@@ -257,7 +257,7 @@ def main():
 	df_recall = df_recall[[c for c in pos] + ["dbl_quantidade"]].fillna(0)
 	df_recall = df_recall.rename(columns={"dbl_quantidade": "recallD3"})
 	df_recall["recallD3"] *= -1
-	df_recall = df_recall.sort_values(["contrato", "data"])
+	# df_recall = df_recall.sort_values(["contrato", "data"],ascending=True)
 
 	df_recall["PendRecallD1"] = 0
 	df_recall["PendRecallD2"] = 0

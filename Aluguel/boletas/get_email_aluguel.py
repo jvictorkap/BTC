@@ -42,7 +42,24 @@ def get_email_cm():
         "AluguelCM",
         att_newer_than=8,
     )
-
+def get_email_ativa():
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Ativa//",
+        [".xls", ".xlsm", ".xlsx"],
+        "AluguelAtiva",
+        str_search='(X-GM-RAW "k11@kapitalo.com.br BTC DOADOR has:attachment newer_than:8h")',
+    )
+def get_email_credit():
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Ativa//",
+        [".xls", ".xlsm", ".xlsx"],
+        "AluguelCredit",
+        str_search='(X-GM-RAW "@credit-suisse.com has:attachment newer_than:8h")',
+    )
 
 def get_email_orama():
     email_gmail.get_mail_files(
