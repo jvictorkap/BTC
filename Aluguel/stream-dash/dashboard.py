@@ -53,6 +53,11 @@ from make_plots import (
     altair_plot,
     bokeh_plot,
 )
+def pretty(s: str) -> str:
+    try:
+        return dict(js="JavaScript")[s]
+    except KeyError:
+        return s.capitalize()
 
 table_subsidio = "G:\\Trading\\K11\\Aluguel\\Subsidiado\\aluguel_subsidiado.xlsx"
 
@@ -750,6 +755,25 @@ if options == "Ibovespa":
         )
         fig_kap_t.update_traces(textposition="inside", textinfo="percent+label")
         st.plotly_chart(fig_kap_t)
+    ops=data.df["codigo"].tolist()
+    
+    ops.insert(0,"IBOV")
+    stocks = st.multiselect(
+    "Selecionar Análise de Taxa", options=ops, default="IBOV", format_func=pretty
+    )
+
+    ibov_rate=data.get_ibov_rate()
+    if stocks!=['IBOV']:
+        aux_s=stocks.remove('IBOV')
+        ibov_rate=ibov_rate.merge(data.get_risk_taxes(aux_s),on='dte_data')
+    else:
+         ibov_rate=data.get_ibov_rate()
+         
+    fig = px.line(ibov_rate.set_index('dte_data'))
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
 
 
 if options == "BBI":

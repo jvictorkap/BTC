@@ -29,7 +29,7 @@ def parse_excel_bofa(file_path):
     ]
 
     df=df[df['Side']!="Renewal"]
-    df=df[df['hour']!="N"]
+    # df=df[df['hour']=="N"]
     df["dte_datavencimento"] = df["Maturity"]
     df["dbl_taxa"] = df["Rate"].astype(float)
     df["str_papel"] = df["Ticker"]

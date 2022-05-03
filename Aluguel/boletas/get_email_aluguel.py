@@ -55,10 +55,20 @@ def get_email_credit():
     email_gmail.get_mail_files(
         [],
         "",
-        "G://Trading//K11//Aluguel//Trades//Ativa//",
+        "G://Trading//K11//Aluguel//Trades//Credit//",
         [".xls", ".xlsm", ".xlsx"],
         "AluguelCredit",
         str_search='(X-GM-RAW "@credit-suisse.com has:attachment newer_than:8h")',
+    )
+
+def get_email_guide():
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Guide//",
+        [".xls", ".xlsm", ".xlsx"],
+        "AluguelGuide",
+        str_search='(X-GM-RAW "@guide.com.br has:attachment newer_than:8h")',
     )
 
 def get_email_orama():
@@ -161,7 +171,7 @@ def get_email_cm():
 
 def get_email_modal():
     email_gmail.get_mail_files(
-        ["vinicius.carmo@modal.com.br"],
+        ["vinicius.carmo@modal.com.br","vinicius.rossini@modalmais.com.br"],
         "",
         "G://Trading//K11//Aluguel//Trades//Modal//",
         [".xls", ".xlsm", ".xlsx"],

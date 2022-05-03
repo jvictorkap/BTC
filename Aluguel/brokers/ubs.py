@@ -45,7 +45,7 @@ def parse_excel_ubs(file_path):
     df.fillna(0, inplace=True)
     df = df[df["str_tipo"] != 0]
     df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
-    df['dte_datavencimento'] = df['dte_datavencimento'].apply(lambda x: datetime.strptime(x, '%d/%m/%y'))
+    # df['dte_datavencimento'] = df['dte_datavencimento'].apply(lambda x: datetime.strptime(x, '%d/%m/%y'))
     df["str_corretora"] = "Link"
     df["str_tipo_registro"] = df["modalidade"].apply(
         lambda x: "R" if x == "BALCAO" else "N" if x == "D+1" else None

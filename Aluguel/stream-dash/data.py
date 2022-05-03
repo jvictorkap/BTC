@@ -119,6 +119,21 @@ def update_sub():
             print(trade.iloc[index])
 
 
+def get_ibov_rate():
+    query="select dte_data, rate as IBOV from ibov_index_rate"
+    db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
+    ibov_rate=pd.read_sql(query, db_conn_k11)
+    return ibov_rate
+
+
+
+def get_risk_taxes(stocks):
+    query="select rptdt as dte_data,takravrgrate,tckrsymb from b3up2data.equities_assetloanfilev2 where mktnm='Balcao'"
+    db_conn_risk = psycopg2.connect(host=config.DB_RISK_HOST, dbname=config.DB_RISK_NAME , user=config.DB_RISK_USER, password=config.DB_RISK_PASS)
+    df=pd.read_sql(query, db_conn_risk)
+    df = df.pivot(index="dte_data", columns="tckrsymb", values="takravrgrate")
+    df=df[stocks].reset_index()
+    return df
 
 # if __name__ =='__main__':
 #     update_sub()

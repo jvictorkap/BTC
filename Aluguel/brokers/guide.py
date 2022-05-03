@@ -9,9 +9,9 @@ import numpy as np
 import pandas as pd
 
 
-def parse_excel_modal(file_path):
-    df = pd.read_excel(file_path)
+def parse_excel_guide(file_path):
 
+    df = pd.read_excel(file_path)
     df.rename(
         columns={
             "fundo": "str_fundo",
@@ -23,24 +23,25 @@ def parse_excel_modal(file_path):
         },
         inplace=True,
     )
+
+    df.fillna(0, inplace=True)
+    df = df[df["str_papel"] != 0]
+    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
+    df["str_corretora"] = "Guide"
     df["str_tipo_registro"] = df["modalidade"].apply(
         lambda x: "R" if x == "BALCAO" else "N" if x == "D1" else None
     )
     df["str_modalidade"] = df["str_tipo_registro"].apply(
         lambda x: "E1" if x == "N" else None
     )
-    df['str_tipo']='D'
     df["str_tipo_comissao"] = "A"
     df["dbl_valor_fixo_comissao"] = 0
     df["str_reversivel"] = "TD"
-    df['str_corretora']='Modal'
     df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
-    df["dte_databoleta"] = workdays.workday(
-        date.today(), 0, workdays.load_holidays()
-    ).strftime("%d/%m/%Y")
     df["str_status"] = "Emprestimo"
-    df['dbl_taxa']=df['dbl_taxa']*100
-    df['dbl_quantidade']=-df['dbl_quantidade']
+    df["str_tipo"] = "D"
+    df["dbl_quantidade"] = df["dbl_quantidade"].apply(lambda x: x * (-1))
+
 
     df["dte_databoleta"] = date.today().strftime("%Y-%m-%d")
     df["dte_data"] = date.today().strftime("%Y-%m-%d")

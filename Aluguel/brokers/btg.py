@@ -62,6 +62,8 @@ def parse_excel_BTG(file_path):
     )
     df["dte_databoleta"] = date.today().strftime("%Y-%m-%d")
     df["dte_data"] = date.today().strftime("%Y-%m-%d")
+
+
     return df[[
             "dte_databoleta",
             "dte_data",
@@ -71,11 +73,11 @@ def parse_excel_BTG(file_path):
             "dte_datavencimento",
             "dbl_taxa",
             "str_reversivel",
-            "str_papel",
-            "dbl_quantidade",
             "str_tipo_registro",
             "str_modalidade",
             "str_tipo_comissao",
             "dbl_valor_fixo_comissao",
+            "str_papel",
+            "dbl_quantidade",                  
             "str_status",
     ]]
