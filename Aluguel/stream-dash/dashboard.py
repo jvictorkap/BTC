@@ -1,5 +1,6 @@
 from sched import scheduler
 import sys
+from textwrap import fill
 from typing import Optional
 
 from matplotlib.pyplot import axis
@@ -36,6 +37,7 @@ from boletas.main import main as boleta_main
 from boletas.send_email import send_lend as send_email_lend
 from boletas.send_email import send_borrow as send_email_borrow
 import trading_sub
+from devolucoes.devolucao import fill_devol, fill_devol_doador
 from Renovacoes import renov_new
 import pyperclip
 from BBI import get_bbi
@@ -43,6 +45,7 @@ from plotly.subplots import make_subplots
 import os
 from io import StringIO
 import pymongo
+from streamlit_option_menu import option_menu
 pd.options.mode.chained_assignment = None  # default='warn'
 
 from make_plots import (
@@ -110,7 +113,7 @@ holidays_b3 = workdays.load_holidays("B3")
 image_path = "logo-kapitalo.png"
 
 st.set_page_config(layout="wide")
-
+main_df=pd.DataFrame()
 
 def img_to_bytes(img_path):
     img_bytes = Path(img_path).read_bytes()
@@ -125,27 +128,39 @@ st.markdown(
     header_html,
     unsafe_allow_html=True,
 )
+
 st.sidebar.write("Options")
+# with st.sidebar:
+# options = option_menu(
+# None,
+# ["Rotina", "Mapa", "Taxa", "Boletador", "Taxa-Subsidio", "Ibovespa", "BBI"],icons=['house','book','graph-up','cash','bank','cloud'],menu_icon='cast',default_index=0,orientation="horizontal")
 
 
 options = st.sidebar.selectbox(
     "Which Dashboard?",
     {"Rotina", "Mapa", "Taxa", "Boletador", "Taxa-Subsidio", "Ibovespa", "BBI","Simulação"},
 )
+fundos={'KAPITALO KAPPA MASTER FIM','KAPITALO K10 PREV MASTER FIM'}
 
 # st.header(options)
 
 if options == "Mapa":
-
-    st.write("## Mapa") 
+    select_fund = st.sidebar.selectbox(
+        "Fundo",
+        fundos,
+    )
+    st.write("## Mapa")
+    main_df = mapa.main('KAPITALO KAPPA MASTER FIM')
     if st.sidebar.button("Update Database"):
 
         dt = datetime.date.today()
         dt_1 = workdays.workday(dt, -1, holidays_b3)
-        data.df = mapa.main()
-        data.main()
+        aux=select_fund
+        main_df = mapa.main(select_fund)
+         
+        
 
-    gb = GridOptionsBuilder.from_dataframe(data.df)
+    gb = GridOptionsBuilder.from_dataframe(main_df)
     gb.configure_default_column(
         groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True
     )
@@ -162,7 +177,7 @@ if options == "Mapa":
         groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True
     )
     grid_response = AgGrid(
-        data.df,
+        main_df,
         gridOptions=gridOptions,
         height=600,
         width="100%",
@@ -175,9 +190,9 @@ if options == "Mapa":
 
 
 if options == "Taxa":
-
-    st.write("## Taxa")
     ticker = st.sidebar.text_input("Ticker", value="BOVA11", max_chars=6).upper()
+    st.write(f"## {ticker}")
+    # ticker = st.sidebar.text_input("Ticker", value="BOVA11", max_chars=6).upper()
     days = st.sidebar.number_input("Days", value=21, step=1, format="%i")
     df = DB.get_taxas(days=days,ticker_name=ticker)
     tx_df = df.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
@@ -241,21 +256,26 @@ if options == "Taxa":
 
 
 if options == "Rotina":
+    select_fund = st.sidebar.selectbox(
+        "Fundo",
+        fundos,
+    )
 
     # if(st.sidebar.button('Update Database')):
-
+    main_df = mapa.main('KAPITALO KAPPA MASTER FIM')
+    
     if st.sidebar.button("Update Database"):
         dt = datetime.date.today()
         dt_1 = workdays.workday(dt, -1, holidays_b3)
-        data.df = mapa.main()
-        data.update_sub()
+        main_df = mapa.main(select_fund)
+        data.update_sub(select_fund)
 
-    st.title("Rotina - BTC")
+    st.title(f"Rotina - BTC - {select_fund}")
     st.write("Conjunto de arquivos uteis para a rotina")
 
     st.write("## Tomar pra janela ")
 
-    borrow_janela = mapa.get_borrow_janela(data.df)
+    borrow_janela = mapa.get_borrow_janela(main_df)
     borrow_janela = borrow_janela.rename(columns={"to_borrow_0": "Quantidade"})
 
     if borrow_janela.empty:
@@ -268,11 +288,11 @@ if options == "Rotina":
 
     st.write("## Tomar para o dia ")
 
-    borrow_dia = mapa.get_borrow_dia(data.df)
+    borrow_dia = mapa.get_borrow_dia(main_df)
     query="select * from aluguel_sub"
     db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
     borrow_sub=pd.read_sql(query, db_conn_k11)
-    
+    db_conn_k11.close()
 
 
 
@@ -328,9 +348,9 @@ if options == "Rotina":
             send_email_borrow(df=borrow_dia, broker=select_broker_borrow)
 
     st.write("## Saldo doador ")
-    saldo_lend = mapa.get_lend_dia(data.df)
+    saldo_lend = mapa.get_lend_dia(main_df)
     saldo_lend = saldo_lend.rename(columns={"codigo": "Codigo", "to_lend": "Saldo"})
-
+    devol = fill_devol(main_df)
     if saldo_lend.empty:
         st.write("Não há ativos para doar")
     else:
@@ -345,9 +365,28 @@ if options == "Rotina":
             saldo_lend = saldo_lend[saldo_lend.index == search_cod]
             st.dataframe(saldo_lend)
 
-        copy_button = st.button(label="Copy Table")
-        if copy_button:
-            pyperclip.copy(saldo_lend.to_csv(sep="\t"))
+        # copy_button = st.button(label="Copy Table")
+        copy_button = Button(label="Copy Table")
+        copy_button.js_on_event(
+                "button_click",
+                CustomJS(
+                    args=dict(df=saldo_lend.to_csv(sep="\t")),
+                    code="""
+            navigator.clipboard.writeText(df);
+            """,
+                ),
+            )
+        no_event_sub = streamlit_bokeh_events(
+                copy_button,
+                events="GET_TEXT",
+                key="get_text_sub",
+                refresh_on_update=True,
+                override_height=75,
+                debounce_time=0,
+            )
+
+        # if copy_button:
+        #     pyperclip.copy(saldo_lend.to_csv(sep="\t"))
 
         select_broker = st.multiselect(
             "Select Broker", ["UBS", "Bofa", "Eu", "Gabriel"]
@@ -424,12 +463,12 @@ if options == "Rotina":
         ## Botão para renovar automatico
 
     st.write("## Devoluções")
-    if data.devol.empty:
+    if devol.empty:
         st.write("Não há devoluções disponíveis")
     else:
         st.write("Arquivo disponível na pasta devoluções")
 
-        gb = GridOptionsBuilder.from_dataframe(data.devol)
+        gb = GridOptionsBuilder.from_dataframe(devol)
         gb.configure_default_column(
             groupable=True,
             value=True,
@@ -453,7 +492,7 @@ if options == "Rotina":
             editable=True,
         )
         grid_response = AgGrid(
-            data.devol,
+            devol,
             gridOptions=gridOptions,
             height=400,
             width="100%",
@@ -465,51 +504,51 @@ if options == "Rotina":
         )
         copy_button_devol = st.button(label="Copy Table Devol")
         if copy_button_devol:
-            pyperclip.copy(data.devol.to_csv(sep="\t").replace(".", ","))
+            pyperclip.copy(devol.to_csv(sep="\t").replace(".", ","))
 
 
-    if data.devol_doador.empty:
-        st.write("Não há devoluções doadoras disponíveis")
-    else:
-        st.write("Arquivo disponível na pasta devoluções")
+    # if data.devol_doador.empty:
+    #     st.write("Não há devoluções doadoras disponíveis")
+    # else:
+    #     st.write("Arquivo disponível na pasta devoluções")
 
-        gb = GridOptionsBuilder.from_dataframe(data.devol_doador)
-        gb.configure_default_column(
-            groupable=True,
-            value=True,
-            enableRowGroup=True,
-            aggFunc="sum",
-            editable=True,
-        )
-        gb.configure_grid_options(domLayout="normal")
-        gb.configure_selection(
-            selection_mode="multiple",
-            use_checkbox=True,
-        )
-        gridOptions = gb.build()
+    #     gb = GridOptionsBuilder.from_dataframe(data.devol_doador)
+    #     gb.configure_default_column(
+    #         groupable=True,
+    #         value=True,
+    #         enableRowGroup=True,
+    #         aggFunc="sum",
+    #         editable=True,
+    #     )
+    #     gb.configure_grid_options(domLayout="normal")
+    #     gb.configure_selection(
+    #         selection_mode="multiple",
+    #         use_checkbox=True,
+    #     )
+    #     gridOptions = gb.build()
 
-        gb.configure_side_bar()
-        gb.configure_default_column(
-            groupable=True,
-            value=True,
-            enableRowGroup=True,
-            aggFunc="sum",
-            editable=True,
-        )
-        grid_response = AgGrid(
-            data.devol_doador,
-            gridOptions=gridOptions,
-            height=400,
-            width="100%",
-            fit_columns_on_grid_load=False,
-            allow_unsafe_jscode=True,  # Set it to True to allow jsfunction to be injected
-            enable_enterprise_modules=True,
-            theme="blue",
-            update_mode=GridUpdateMode.SELECTION_CHANGED,
-        )
-        copy_button_devol = st.button(label="Copy Table Devol Loan")
-        if copy_button_devol:
-            pyperclip.copy(data.devol_doador.to_csv(sep="\t").replace(".", ","))
+    #     gb.configure_side_bar()
+    #     gb.configure_default_column(
+    #         groupable=True,
+    #         value=True,
+    #         enableRowGroup=True,
+    #         aggFunc="sum",
+    #         editable=True,
+    #     )
+    #     grid_response = AgGrid(
+    #         data.devol_doador,
+    #         gridOptions=gridOptions,
+    #         height=400,
+    #         width="100%",
+    #         fit_columns_on_grid_load=False,
+    #         allow_unsafe_jscode=True,  # Set it to True to allow jsfunction to be injected
+    #         enable_enterprise_modules=True,
+    #         theme="blue",
+    #         update_mode=GridUpdateMode.SELECTION_CHANGED,
+    #     )
+    #     copy_button_devol = st.button(label="Copy Table Devol Loan")
+    #     if copy_button_devol:
+    #         pyperclip.copy(data.devol_doador.to_csv(sep="\t").replace(".", ","))
 
 
 
@@ -578,7 +617,7 @@ if options == "Taxa-Subsidio":
     query="select * from aluguel_sub"
     db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
     borrow_sub=pd.read_sql(query, db_conn_k11)
-    
+    db_conn_k11.close()
     # borrow_sub = pd.read_excel(table_subsidio, index_col=0)
 
     # borrow_sub=trading_sub.del_sub(df=borrow_sub,df_boletas=data.boletas_dia)
@@ -611,6 +650,11 @@ if options == "Taxa-Subsidio":
 if options == "Ibovespa":
 
     st.write("## Ibovespa")
+    select_fund = st.sidebar.selectbox(
+    "Fundo",
+    fundos,
+    )
+
     # start = workdays.workday(datetime.date.today(), -3, workdays.load_holidays("B3"))
     aux = DB.get_taxas(days=3, ticker_name="BOVA11")
     aux = aux.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
@@ -619,7 +663,7 @@ if options == "Ibovespa":
     col1.metric("Taxa Cateira", f"{data.ibov.loc[0,'Aluguel Carteira']}%")
     col2.metric("Taxa BOVA11", f"{aux.loc[data.get_dt_1(),'BOVA11']}%")
 
-    map_aux = data.df[["codigo", "taxa_doado","taxa_tomado"]]
+    map_aux = data.main(select_fund)[["codigo", "taxa_doado","taxa_tomado"]]
     map_aux = map_aux.rename(columns={"codigo": "cod"})
     
     ibov = pd.merge(data.ibov, map_aux, on="cod", how="left")
@@ -755,7 +799,7 @@ if options == "Ibovespa":
         )
         fig_kap_t.update_traces(textposition="inside", textinfo="percent+label")
         st.plotly_chart(fig_kap_t)
-    ops=data.df["codigo"].tolist()
+    ops=main_df["codigo"].tolist()
     
     ops.insert(0,"IBOV")
     stocks = st.multiselect(
@@ -782,12 +826,13 @@ if options == "BBI":
 
     st.write("## Trades ativos")
     if st.sidebar.button("Update BBI"):
-        data.trades_bbi = get_bbi.importa_trades_bbi()
-        data.renov_bbi = get_bbi.importa_renovacoes_aluguel_bbi()
-    if data.trades_bbi.empty:
+        global trades_bbi
+        trades_bbi = get_bbi.importa_trades_bbi()
+        renov_bbi = get_bbi.importa_renovacoes_aluguel_bbi()
+    if trades_bbi.empty:
         st.write("Não há boletas ativas disponíveis ")
     else:
-        gb = GridOptionsBuilder.from_dataframe(data.trades_bbi)
+        gb = GridOptionsBuilder.from_dataframe(trades_bbi)
         gb.configure_default_column(
             groupable=True,
             value=True,
@@ -812,7 +857,7 @@ if options == "BBI":
             editable=True,
         )
         grid_response = AgGrid(
-            data.trades_bbi,
+            trades_bbi,
             gridOptions=gridOptions,
             height=300,
             width="50%",
@@ -824,11 +869,11 @@ if options == "BBI":
         )
 
     st.write("## Renovações ativas")
-
-    if data.renov_bbi.empty:
+    
+    if renov_bbi().empty:
         st.write("Não há boletas ativas disponíveis ")
     else:
-        gb = GridOptionsBuilder.from_dataframe(data.renov_bbi)
+        gb = GridOptionsBuilder.from_dataframe(renov_bbi())
         gb.configure_default_column(
             groupable=True,
             value=True,
@@ -853,7 +898,7 @@ if options == "BBI":
             editable=True,
         )
         grid_response = AgGrid(
-            data.renov_bbi,
+            renov_bbi(),
             gridOptions=gridOptions,
             height=300,
             width="50%",
@@ -863,22 +908,4 @@ if options == "BBI":
             theme="blue",
             update_mode=GridUpdateMode.SELECTION_CHANGED,
         )
-if options =="Simulação":
-
-    quant = st.sidebar.number_input("Quantidade", step=1, format="%i")
-
-    taxa = st.sidebar.number_input("Taxa (a,a)%", format="%.2f")
-    price = st.sidebar.number_input("Preço", format="%.2f")
-    days=st.sidebar.number_input("Dias", step=1, format="%i")
-    cdi=11.65/100
-
-
-    # vencimento = st.sidebar.date_input("Vencimento", datetime.datetime(2022, 1, 1))
-    st.write("## Simulação")
-
-    st.write(f"### cdi: {cdi*100}%")
-    if st.sidebar.button("Simular"):
-        st.write(f"### Notional: {quant*price}")
-        st.write(f"### Resultado: {round(quant*price*(((1+taxa)**(days/252))-1),2)}")
-
 

@@ -16,12 +16,12 @@ import psycopg2
 import pandas as pd
 import config
 pd.options.mode.chained_assignment = None  # default='warn'
-df = mapa.main()
-devol = fill_devol(df)
-devol_doador=fill_devol_doador(df)
-boletas_dia = DB.get_alugueis_boletas(datetime.date.today())
-trades_bbi = get_bbi.importa_trades_bbi()
-renov_bbi = get_bbi.importa_renovacoes_aluguel_bbi()
+# df = mapa.main()
+# devol = fill_devol(df)
+# devol_doador=fill_devol_doador(df)
+# boletas_dia = DB.get_alugueis_boletas(datetime.date.today())
+# trades_bbi = get_bbi.importa_trades_bbi()
+# renov_bbi = get_bbi.importa_renovacoes_aluguel_bbi()
 
 
 ibov = carteira_ibov.carteira_ibov()
@@ -61,48 +61,55 @@ def get_dt_1(x=None):
         dt_1 = workdays.workday(dt, -1, holidays_b3)
     return dt_1
 
+# def importa_trades_bbi():
+
+#     return get_bbi.importa_trades_bbi
+
+# def renov_bbi():
+
+#     return get_bbi.importa_renovacoes_aluguel_bbi()
+
+def main(fundo):
+    df = mapa.main(fundo)
+    # devol = fill_devol(df)
+    # devol_doador=fill_devol_doador(df)
+    # boletas_dia = DB.get_alugueis_boletas(fundo,datetime.date.today())
+    # trades_bbi = get_bbi.importa_trades_bbi()
+    # renov_bbi = 
 
 
-def main():
-    df = mapa.main()
-    devol = fill_devol(df)
-    devol_doador=fill_devol_doador(df)
-    boletas_dia = DB.get_alugueis_boletas(datetime.date.today())
-    trades_bbi = get_bbi.importa_trades_bbi()
-    renov_bbi = get_bbi.importa_renovacoes_aluguel_bbi()
+    # ibov = carteira_ibov.carteira_ibov()
 
-
-    ibov = carteira_ibov.carteira_ibov()
-
-    holidays_br = workdays.load_holidays("BR")
-    holidays_b3 = workdays.load_holidays("B3")
+    # holidays_br = workdays.load_holidays("BR")
+    # holidays_b3 = workdays.load_holidays("B3")
 
     dt = datetime.date.today()
-    print(dt)
-    vcto_0 = dt.strftime("%d/%m/%Y")
-    dt_pos = workdays.workday(dt, -1, holidays_br)
-    dt_1 = workdays.workday(dt, -1, holidays_b3)
-    dt_2 = workdays.workday(dt, -2, holidays_b3)
-    dt_3 = workdays.workday(dt, -3, holidays_b3)
-    dt_4 = workdays.workday(dt, -4, holidays_b3)
+    # print(dt)
+    # vcto_0 = dt.strftime("%d/%m/%Y")
+    # dt_pos = workdays.workday(dt, -1, holidays_br)
+    # dt_1 = workdays.workday(dt, -1, holidays_b3)
+    # dt_2 = workdays.workday(dt, -2, holidays_b3)
+    # dt_3 = workdays.workday(dt, -3, holidays_b3)
+    # dt_4 = workdays.workday(dt, -4, holidays_b3)
 
-    dt_next_1 = workdays.workday(dt, 1, holidays_b3)
-    vcto_1 = "venc " + dt_next_1.strftime("%d/%m/%Y")
-    dt_next_2 = workdays.workday(dt, 2, holidays_b3)
-    vcto_2 = "venc " + dt_next_2.strftime("%d/%m/%Y")
-    dt_next_3 = workdays.workday(dt, 3, holidays_b3)
-    vcto_3 = "venc " + dt_next_3.strftime("%d/%m/%Y")
-    dt_next_4 = workdays.workday(dt, 4, holidays_b3)
-    vcto_4 = "venc " + dt_next_4.strftime("%d/%m/%Y")
-    dt_next_5 = workdays.workday(dt, 5, holidays_b3)
-    vcto_5 = "venc " + dt_next_5.strftime("%d/%m/%Y")
+    # dt_next_1 = workdays.workday(dt, 1, holidays_b3)
+    # vcto_1 = "venc " + dt_next_1.strftime("%d/%m/%Y")
+    # dt_next_2 = workdays.workday(dt, 2, holidays_b3)
+    # vcto_2 = "venc " + dt_next_2.strftime("%d/%m/%Y")
+    # dt_next_3 = workdays.workday(dt, 3, holidays_b3)
+    # vcto_3 = "venc " + dt_next_3.strftime("%d/%m/%Y")
+    # dt_next_4 = workdays.workday(dt, 4, holidays_b3)
+    # vcto_4 = "venc " + dt_next_4.strftime("%d/%m/%Y")
+    # dt_next_5 = workdays.workday(dt, 5, holidays_b3)
+    # vcto_5 = "venc " + dt_next_5.strftime("%d/%m/%Y")
+    return df
 
-def update_sub():
+def update_sub(fundo):
     queryf="select * from aluguel_sub"
     db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
     borrow_sub=pd.read_sql(queryf, db_conn_k11)
-
-    boletas=DB.get_alugueis_boletas(dt=None)
+    
+    boletas=DB.get_alugueis_boletas(dt=None,fundo=fundo)
 
     boletas=boletas[['str_corretora','dbl_taxa','str_papel','dbl_quantidade','dte_datavencimento']]
     boletas=boletas.rename(columns={'str_papel':'str_codigo','dte_datavencimento':'dte_vencimento'})
@@ -117,12 +124,14 @@ def update_sub():
             db_conn_k11.commit()
             print("Delete trading from aluguel_sub")
             print(trade.iloc[index])
+    db_conn_k11.close()
 
 
 def get_ibov_rate():
     query="select dte_data, rate as IBOV from ibov_index_rate"
     db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
     ibov_rate=pd.read_sql(query, db_conn_k11)
+    db_conn_k11.close()
     return ibov_rate
 
 
