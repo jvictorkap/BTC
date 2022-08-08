@@ -269,6 +269,7 @@ if options == "Rotina":
         dt_1 = workdays.workday(dt, -1, holidays_b3)
         main_df = mapa.main(select_fund)
         data.update_sub(select_fund)
+        devol = fill_devol(main_df)
 
     st.title(f"Rotina - BTC - {select_fund}")
     st.write("Conjunto de arquivos uteis para a rotina")
@@ -348,9 +349,41 @@ if options == "Rotina":
             send_email_borrow(df=borrow_dia, broker=select_broker_borrow)
 
     st.write("## Saldo doador ")
-    saldo_lend = mapa.get_lend_dia(main_df)
-    saldo_lend = saldo_lend.rename(columns={"codigo": "Codigo", "to_lend": "Saldo"})
-    devol = fill_devol(main_df)
+    
+
+    
+    agg=st.checkbox("Agressivo")
+
+    if agg:
+        if select_fund=='KAPITALO KAPPA MASTER FIM':
+            saldo_lend = pd.read_excel(f"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\Agg\Kappa_lend_agg_{datetime.datetime.today().strftime('%d-%m-%Y')}.xlsx")
+        else:
+            saldo_lend = pd.read_excel(f"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\Agg\Kappa_lend_agg_{datetime.datetime.today().strftime('%d-%m-%Y')}.xlsx")
+    else:
+        if select_fund=='KAPITALO KAPPA MASTER FIM':
+            saldo_lend = pd.read_excel(f"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\Kappa_lend_{datetime.datetime.today().strftime('%d-%m-%Y')}.xlsx")
+        else:
+            saldo_lend = pd.read_excel(f"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\Kappa_lend_{datetime.datetime.today().strftime('%d-%m-%Y')}.xlsx")
+
+    saldo_lend = saldo_lend.drop(columns={'Unnamed: 0'}).rename(columns={"codigo": "Codigo", "to_lend": "Saldo"})
+    saldo_lend = saldo_lend.rename(columns={"codigo": "Codigo", "to_lend Dia agg": "Saldo"})
+
+    check = st.sidebar.button('Check Disponibilidade')
+    if check:
+        saldo = data.saldo_btc().rename(columns={'cod_ativo':"Codigo"})
+
+        aux = saldo_lend.merge(saldo,on='Codigo',how='left')
+        aux['stress']=aux['Disponibilidade']- aux['Saldo']
+
+        if aux[aux['stress']<0].empty:
+            st.warning("Disponibilidade Adequada")
+        else:
+            st.warning("Alerta de Disponibilidade")
+
+
+
+
+  
     if saldo_lend.empty:
         st.write("Não há ativos para doar")
     else:
@@ -461,7 +494,7 @@ if options == "Rotina":
             update_mode=GridUpdateMode.SELECTION_CHANGED,
         )
         ## Botão para renovar automatico
-
+    devol=pd.read_excel("G:\Trading\K11\Aluguel\Arquivos\Devolução\devolucao.xlsx").drop(columns=['Unnamed: 0'])
     st.write("## Devoluções")
     if devol.empty:
         st.write("Não há devoluções disponíveis")
@@ -502,53 +535,25 @@ if options == "Rotina":
             theme="blue",
             update_mode=GridUpdateMode.SELECTION_CHANGED,
         )
-        copy_button_devol = st.button(label="Copy Table Devol")
-        if copy_button_devol:
-            pyperclip.copy(devol.to_csv(sep="\t").replace(".", ","))
 
-
-    # if data.devol_doador.empty:
-    #     st.write("Não há devoluções doadoras disponíveis")
-    # else:
-    #     st.write("Arquivo disponível na pasta devoluções")
-
-    #     gb = GridOptionsBuilder.from_dataframe(data.devol_doador)
-    #     gb.configure_default_column(
-    #         groupable=True,
-    #         value=True,
-    #         enableRowGroup=True,
-    #         aggFunc="sum",
-    #         editable=True,
-    #     )
-    #     gb.configure_grid_options(domLayout="normal")
-    #     gb.configure_selection(
-    #         selection_mode="multiple",
-    #         use_checkbox=True,
-    #     )
-    #     gridOptions = gb.build()
-
-    #     gb.configure_side_bar()
-    #     gb.configure_default_column(
-    #         groupable=True,
-    #         value=True,
-    #         enableRowGroup=True,
-    #         aggFunc="sum",
-    #         editable=True,
-    #     )
-    #     grid_response = AgGrid(
-    #         data.devol_doador,
-    #         gridOptions=gridOptions,
-    #         height=400,
-    #         width="100%",
-    #         fit_columns_on_grid_load=False,
-    #         allow_unsafe_jscode=True,  # Set it to True to allow jsfunction to be injected
-    #         enable_enterprise_modules=True,
-    #         theme="blue",
-    #         update_mode=GridUpdateMode.SELECTION_CHANGED,
-    #     )
-    #     copy_button_devol = st.button(label="Copy Table Devol Loan")
-    #     if copy_button_devol:
-    #         pyperclip.copy(data.devol_doador.to_csv(sep="\t").replace(".", ","))
+        copy_button_devol = Button(label="Copy Table Table")
+        copy_button_devol.js_on_event(
+                "button_click",
+                CustomJS(
+                    args=dict(df=devol.to_csv(sep="\t")),
+                    code="""
+            navigator.clipboard.writeText(df);
+            """,
+                ),
+            )
+        no_event_devol = streamlit_bokeh_events(
+                copy_button_devol,
+                events="GET_TEXT",
+                key="get_text_devol",
+                refresh_on_update=True,
+                override_height=75,
+                debounce_time=0,
+            )
 
 
 
@@ -908,4 +913,37 @@ if options == "BBI":
             theme="blue",
             update_mode=GridUpdateMode.SELECTION_CHANGED,
         )
+
+db_conn_risk = psycopg2.connect(
+host=config.DB_RISK_HOST,
+dbname=config.DB_RISK_NAME,
+user=config.DB_RISK_USER,
+password=config.DB_RISK_PASS,
+)
+
+
+query=f"select rptdt, tckrsymb,stockprtcptnpct as part from b3up2data.index_portfoliocompositionfile_ibov WHERE  rptdt>'{workdays.workday(datetime.date.today(), -21, holidays_b3)}'"
+
+
+query_r=f"select rptdt, tckrsymb,takravrgrate from b3up2data.equities_assetloanfilev2 where mktnm='Balcao'  and rptdt>'{workdays.workday(datetime.date.today(), -21, holidays_b3)}'"
+
+
+ibov=pd.read_sql(query,db_conn_risk)
+
+rates=pd.read_sql(query_r,db_conn_risk)
+df=ibov.merge(rates,on=['rptdt','tckrsymb'])
+df['media']= df['part']*df['takravrgrate']/100
+df=df[['rptdt','media']].groupby('rptdt').sum().reset_index()
+df['media']=round(df['media'],2)
+query_bova=f"select rptdt,takravrgrate as BOVA11 from b3up2data.equities_assetloanfilev2 where mktnm='Balcao' and tckrsymb='BOVA11'  and rptdt>'{workdays.workday(datetime.date.today(), -21, holidays_b3)}'"
+
+bova=pd.read_sql(query_bova,db_conn_risk)
+pair=df.merge(bova,on='rptdt')
+db_conn_risk.close()
+
+
+fig = px.line(pair.set_index('rptdt'))
+# fig.update_layout(title_x='',title_y='')
+st.sidebar.plotly_chart(fig, use_container_width=True)
+
 

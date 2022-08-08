@@ -15,6 +15,8 @@ import workdays
 import psycopg2
 import pandas as pd
 import config
+import os
+from boletas import email_gmail
 pd.options.mode.chained_assignment = None  # default='warn'
 # df = mapa.main()
 # devol = fill_devol(df)
@@ -145,4 +147,36 @@ def get_risk_taxes(stocks):
     return df
 
 # if __name__ =='__main__':
-#     update_sub()
+#     update_sub(
+
+
+def saldo_btc():
+
+    directory = "G://Trading//K11//Aluguel//Arquivos//Disponibilidade//"
+    
+    file_path = (
+        f'{directory}Disponibilidade_BTC_trade_{datetime.date.today().strftime("%Y%m%d")}.xlsx'
+    )
+    if not os.path.exists(file_path):
+        email_gmail.get_mail_files(
+            [],
+            "",
+            directory,
+            [".xls", ".xlsm", ".xlsx"],
+            f"Disponibilidade_BTC",
+            str_search='(X-GM-RAW "btc@kapitalo.com.br BTC has:attachment newer_than:8h")',
+        )
+
+        df = pd.read_excel(file_path)
+        df.columns=df.iloc[2]
+        df.columns.values[len(df.columns)-1]='Disponibilidade'
+        df = df.iloc[3:len(df)][df['fundo']=='KAPITALO KAPPA MASTER FIM'][['cod_ativo','Disponibilidade']]
+        df.to_excel(file_path)
+    else:
+        df = pd.read_excel(file_path)
+
+    return df
+
+
+# if __name__=='__main__':
+#    saldo_btc() 
