@@ -28,7 +28,10 @@ def next_day(d):
 	return memoize[d.strftime("%Y-%m-%d")]
 
 
-def main():
+def main(fundo=None):
+	if fundo==None:
+		fundo='KAPITALO KAPPA MASTER FIM'
+
 
 	print("executing main")
 	holidays_br = workdays.load_holidays("BR")
@@ -56,11 +59,11 @@ def main():
 	# Auxdictionay
 	# df_corretagem= pd.read_excel(r'G:\Trading\K11\\Aluguel\Tables\Book_corretagens.xlsx')
 
-	df_pos = DB.get_equity_positions(dt_1)
+	df_pos = DB.get_equity_positions(fundo,dt_1)
 	df = pd.DataFrame(df_pos[["regexp_replace", "sum"]])
 	df.rename(columns={"regexp_replace": "codigo", "sum": "position"}, inplace=True)
 
-	df_ctosaluguel = DB.get_alugueis(dt_1, dt)
+	df_ctosaluguel = DB.get_alugueis(dt_1, dt,fundo=fundo)
 
 	# df_ctosaluguel['negeletr type']=df_ctosaluguel['negeletr'].apply(lambda x: 'R' if( x == False) else 'N')
 	# df_ctosaluguel['taxa_b3']= df_ctosaluguel.apply(lambda row: taxas.calculo_b3(100*row['taxa'],row['negeletr type']),axis=1)
@@ -103,7 +106,7 @@ def main():
 
 	df["estimativa_tomada"] = df["estimativa_tomada"].round(2)
 
-	df_ctosaluguel_trade = DB.get_alugueis_boletas(dt)
+	df_ctosaluguel_trade = DB.get_alugueis_boletas(dt,fundo=fundo)
 	df_ctosaluguel_trade.rename(
 		columns={"dbl_quantidade": "quantidade", "str_papel": "codigo"}, inplace=True
 	)
@@ -214,10 +217,10 @@ def main():
 	df["pos_tomada"].fillna(0, inplace=True)
 
 	## Movimentação em custódia
-	df_mov_0 = DB.get_equity_trades(dt_2)
+	df_mov_0 = DB.get_equity_trades(fundo,dt_2)
 	df = df.merge(df_mov_0[["codigo", "qtd"]], on="codigo", how="outer")
 	df.rename(columns={"qtd": "mov_0"}, inplace=True)
-	df_mov_1 = DB.get_equity_trades(dt_1)
+	df_mov_1 = DB.get_equity_trades(fundo,dt_1)
 	df = df.merge(df_mov_1[["codigo", "qtd"]], on="codigo", how="outer")
 	df.rename(columns={"qtd": "mov_1"}, inplace=True)
 
@@ -243,8 +246,8 @@ def main():
 	##
 
 	# recalls
-	recalls = DB.get_recalls(dt_3)
-	pos = DB.get_aluguel_posrecall(dt_4)
+	recalls = DB.get_recalls(dt_3,fundo=fundo)
+	pos = DB.get_aluguel_posrecall(dt_4,fundo=fundo)
 
 	pos["data"] = pos["data"].apply(lambda x: next_day(x))
 	df_recall = pd.merge(
@@ -310,7 +313,7 @@ def main():
 		{"PendRecallD1": sum, "PendRecallD2": sum, "PendRecallD3": sum}
 	)
 
-	df_recall_last.to_excel("df_recall.xlsx")
+	# df_recall_last.to_excel("df_recall.xlsx")
 
 	try:
 		df_recall_tomador=pd.read_excel(open('G://Trading//K11//Aluguel//Recall//RECALL_BRAD_BBI_KAPITALO_'+dt.strftime('%d%m%Y')+'.xlsx', 'rb'),
@@ -321,6 +324,9 @@ def main():
 
 
 	if not df_recall_tomador.empty:
+		## Fundo
+
+		
 		df_recall_tomador=df_recall_tomador[df_recall_tomador['Cliente']=='KAPITALO MASTER I FUNDO DE INVESTIMENTO MULTIMERCADO']
 
 		
@@ -468,17 +474,23 @@ def main():
 
 	lend_dia.to_excel(
 		"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\\"
-		+ "Kappa_lend_to_day_"
+		+ "Kappa_lend_"
 		+ dt.strftime("%d-%m-%Y")
 		+ ".xlsx"
 	)
+	lend_agg = df[df["to_lend Dia agg"] != 0]
+	lend_agg = lend_agg[['codigo','to_lend Dia agg']]
+
+	lend_agg.to_excel(f"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\Agg\Kappa_lend_agg_{dt.strftime('%d-%m-%Y')}.xlsx")
+
+	lend_dia = lend_dia[["codigo", "to_lend"]]
 
 	df["to_lend Janela"] = np.maximum(np.maximum(0, df["to_lend"]) - df["mov_0"], 0)
 
 	lend_janela = df[df["to_lend Janela"] != 0]
 	lend_janela = lend_janela[["codigo", "to_lend Janela"]]
 	lend_janela.to_excel(
-		"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo doador - Janela\\"
+		"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Janela\\"
 		+ "Kappa_lend_"
 		+ dt.strftime("%d-%m-%Y")
 		+ ".xlsx"

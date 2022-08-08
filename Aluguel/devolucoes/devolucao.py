@@ -24,8 +24,9 @@ def fill_devol(main_df: pd.DataFrame):
 
     df = get_df_devol(main_df)
 
-    devol = emprestimo.get_devolucao()
-
+    devol = emprestimo.get_devolucao(main_df)
+    devol = devol.loc[(devol['corretora']!='BTG PACTUAL CTVM S/A') &  (devol['taxa']!=0.1) ] 
+    
     custodia = get_df_custodia(main_df)
 
     devol["estimativa"] = devol["taxa"] * devol["preco_init"]
@@ -39,13 +40,14 @@ def fill_devol(main_df: pd.DataFrame):
     ativos_devol["devol_tomador"] = ativos_devol["devol_tomador"] * (-1)
 
     ativos_devol = ativos_devol.merge(
-        get_df_custodia(emprestimo.main_df), on="codigo", how="inner"
+        get_df_custodia(main_df), on="codigo", how="inner"
     )
 
     devol = devol.merge(ativos_devol, on="codigo", how="inner")
 
     devol["devol_tomador"] = devol["to_lend Dia agg"]
     #
+
 
     devol["fim"] = 0
 
@@ -106,7 +108,7 @@ def fill_devol(main_df: pd.DataFrame):
         inplace=True,
     )
 
-    devol.to_excel("devolucao.xlsx")
+    devol.to_excel("G:\Trading\K11\Aluguel\Arquivos\Devolução\devolucao.xlsx")
 
     return devol
 
@@ -118,7 +120,7 @@ def fill_devol_doador(main_df: pd.DataFrame):
 
     # cash = pd.read_excel('trades_cash.xlsx')
     
-    devol = emprestimo.get_devolucao_doadora()
+    devol = get_devolucao_doadora()
     
     devol["estimativa"] = devol["taxa"] * devol["preco_init"]
 
@@ -130,7 +132,7 @@ def fill_devol_doador(main_df: pd.DataFrame):
 
 
     ativos_devol = ativos_devol.merge(
-        get_df_custodia(emprestimo.main_df)[["codigo", "position",'to_borrow_1']], on="codigo", how="inner"
+        get_df_custodia(main_df)[["codigo", "position",'to_borrow_1']], on="codigo", how="inner"
     )
 
     # ativos_devol = ativos_devol.merge(
@@ -222,6 +224,6 @@ def get_df_devol_final(devol):  ## df -> main
     return devol
 
 
-# if __name__ == '__main__':
+if __name__ == '__main__':
 
-#     df=fill_devol_doador(main())
+    df=fill_devol(main())

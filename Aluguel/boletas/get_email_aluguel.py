@@ -144,7 +144,7 @@ def get_email_terra():
         "G://Trading//K11//Aluguel//Trades//Terra//",
         [".xlsx"],
         "AluguelTerra",
-        str_search='(X-GM-RAW "@terrainvestimentos.com BTC TERRA has:attachment newer_than:8h")',
+        str_search='(X-GM-RAW "@terrainvestimentos.com BTC has:attachment newer_than:8h")',
     )
 
 

@@ -41,7 +41,7 @@ vcto_5 = "venc " + dt_next_5.strftime("%d/%m/%Y")
 
 df_renovacao = DB.get_renovacoes()
 df_renovacao.rename(columns={"tipo": "str_tipo"}, inplace=True)
-df_mapa = mapa.get_map_renov(emprestimo.main_df)
+df_mapa = mapa.get_map_renov(mapa.main())
 # df_renovacao=df_renovacao[df_renovacao[['saldo']!=0]]
 
 

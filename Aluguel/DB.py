@@ -39,10 +39,9 @@ holidays_b3 = workdays.load_holidays("B3")
 # dt_1 = workdays.workday(dt, -1, holidays_b3)
 
 # #POSITIONS
-def get_equity_positions(dt_1=None):
+def get_equity_positions(fundo,dt_1=None):
     if dt_1==None:
-        dt = datetime.date.today()
-        dt_1 = workdays.workday(dt, -1, holidays_b3)
+        dt_1 = workdays.workday(datetime.date.today(), -1, holidays_b3)
 
     db_conn_test = psycopg2.connect(
         host=config.DB_TESTE_HOST,
@@ -52,14 +51,15 @@ def get_equity_positions(dt_1=None):
     )
     query = f"SELECT str_fundo, str_codigo, regexp_replace(str_serie,' .*',''), sum(dbl_lote) \
 				from tbl_carteira1 \
-				where dte_data='{dt_1.strftime('%Y-%m-%d')}' and str_mercado='Acao' and str_serie<>'DIVIDENDOS' AND str_fundo like 'KAPITALO KAPPA MASTER FIM%' \
+				where dte_data='{dt_1.strftime('%Y-%m-%d')}' and str_mercado='Acao' and str_serie<>'DIVIDENDOS' AND str_fundo like '{fundo}%' \
 				group by str_fundo, str_codigo,str_serie order by str_fundo, str_codigo,str_serie"
     df = pd.read_sql(query, db_conn_test)
+    db_conn_test.close()
     return df
 
 
 # Movimentacoes
-def get_equity_trades(dt):
+def get_equity_trades(fundo,dt):
     db_conn_test = psycopg2.connect(
         host=config.DB_TESTE_HOST,
         dbname=config.DB_TESTE_NAME,
@@ -67,10 +67,11 @@ def get_equity_trades(dt):
         password=config.DB_TESTE_PASS,
     )
     query = f"SELECT dte_data, str_mercado, regexp_replace(str_serie,' .*','') as codigo, sum(dbl_lote) as qtd \
-				FROM tbl_auxboletas1 where str_fundo like 'KAPITALO KAPPA MASTER FIM%' AND dte_data ='{dt.strftime('%Y-%m-%d')}' AND str_mercado='Acao' \
+				FROM tbl_auxboletas1 where str_fundo like '{fundo}%' AND dte_data ='{dt.strftime('%Y-%m-%d')}' AND str_mercado='Acao' \
 				AND str_corretora <>'Interna' \
 				GROUP BY dte_data, str_mercado, str_serie"
     df = pd.read_sql(query, db_conn_test)
+    db_conn_test.close()
     return df
 
 
@@ -88,34 +89,40 @@ def get_prices(dt_1):
     )
     query = f"SELECT split_part(str_serie,' ',1) , dbl_preco  FROM tbl_mtm  WHERE dte_data = '{dt_1.strftime('%Y-%m-%d')}' AND str_bolsa='BOVESPA' AND str_mercado = 'Acao'"
     df_prices = pd.read_sql(query, db_conn_kapv1)
+    db_conn_kapv1.close()
     return df_prices
 
 
-def get_alugueis(dt_1,dt_liq):
-
+def get_alugueis(dt_1,dt_liq,fundo=None):
+    if fundo==None:
+        fundo = 'KAPITALO KAPPA MASTER FIM'
     db_conn_risk = psycopg2.connect(
     host=config.DB_RISK_HOST,
     dbname=config.DB_RISK_NAME,
     user=config.DB_RISK_USER,
     password=config.DB_RISK_PASS,
     )
+    
     query = f"SELECT st_alugcustcorr.contrato, registro, corretora, st_alugcustcorr.cliente as fundo,reversor, codigo, \
 		vencimento, taxa, (avg(qtde)+ case when sum(qteliq) is null then '0' else  sum(qteliq) end) as quantidade, avg(cotliq) as preco_init, \
 		negeletr, (case when sum(qtde) < 0  then 'D' else  'T' end) as Tipo \
 		from st_alugcustcorr left join st_alug_devolucao on st_alugcustcorr.cliente=st_alug_devolucao.cliente and \
 		st_alugcustcorr.contrato=st_alug_devolucao.contrato and dataliq='{dt_liq.strftime('%Y-%m-%d')}' \
-		where data='{dt_1.strftime('%Y-%m-%d')}' and st_alugcustcorr.cliente<>''  AND st_alugcustcorr.cliente like 'KAPITALO KAPPA MASTER FIM%' \
+		where data='{dt_1.strftime('%Y-%m-%d')}' and st_alugcustcorr.cliente<>''  AND st_alugcustcorr.cliente like '{fundo}%' \
 		group by st_alugcustcorr.contrato,registro, corretora,st_alugcustcorr.cliente,reversor,codigo, vencimento, taxa, st_alugcustcorr.negeletr  \
 		HAVING (avg(qtde)+ case when sum(qteliq) is null then '0' else  sum(qteliq) end)<>0  \
 		order by codigo,vencimento,st_alugcustcorr.cliente,contrato"
     df = pd.read_sql(query, db_conn_risk)
+
+    db_conn_risk.close()
     return df
 
 
-def get_alugueis_boletas(dt):
+def get_alugueis_boletas(dt,fundo=None):
     if dt==None:
         dt = datetime.date.today()
-        
+    if fundo==None:
+        fundo='KAPITALO KAPPA MASTER FIM'
     db_conn_test = psycopg2.connect(
     host=config.DB_TESTE_HOST,
     dbname=config.DB_TESTE_NAME,
@@ -129,14 +136,18 @@ def get_alugueis_boletas(dt):
 				dbl_valor_fixo_comissao, str_papel, dbl_quantidade, str_status"
         + '"ID"'
         + f"FROM tbl_novasboletasaluguel WHERE dte_databoleta='{dt.strftime('%Y-%m-%d')}'and \
-				str_fundo like 'KAPITALO KAPPA MASTER FIM%'"
+				str_fundo like '{fundo}%'"
     )
     df = pd.read_sql(query, db_conn_test)
+
+    db_conn_test.close()
     return df
 
 
-def get_recalls(dt_3):
-
+def get_recalls(dt_3,fundo=None):
+    if fundo==None:
+        fundo='KAPITALO KAPPA MASTER FIM'
+    
     db_conn_test = psycopg2.connect(
     host=config.DB_TESTE_HOST,
     dbname=config.DB_TESTE_NAME,
@@ -147,19 +158,25 @@ def get_recalls(dt_3):
 				dte_datavencimento, dbl_taxa, str_reversivel, str_papel, dbl_quantidade, \
 				str_status, int_codcontrato  FROM tbl_novasboletasaluguel \
 				where dte_databoleta>='{dt_3.strftime("%Y-%m-%d")}' and \
-				str_fundo like 'KAPITALO KAPPA MASTER FIM%' \
+				str_fundo like '{fundo}%' \
 				and str_status='Devolucao' and str_tipo='D'"""
     df = pd.read_sql(query, db_conn_test)
+
+    db_conn_test.close()
     return df
 
 
-def get_renovacoes(dt_next_3=None, dt_1=None):
+def get_renovacoes(fundo=None,dt_next_3=None, dt_1=None):
     if dt_1==None:
         dt = datetime.date.today()
         # dt_1 = workdays.workday(dt, -1, holidays_b3)
         dt_1=dt
     if dt_next_3==None:
         dt_next_3=workdays.workday(dt, +3, holidays_b3)
+    if fundo==None:
+        fundo='KAPITALO KAPPA MASTER FIM'   
+
+    
     db_conn_risk = psycopg2.connect(
     host=config.DB_RISK_HOST,
     dbname=config.DB_RISK_NAME,
@@ -173,7 +190,7 @@ def get_renovacoes(dt_next_3=None, dt_1=None):
 				on st_alugcustcorr.cliente=st_alug_devolucao.cliente and \
 				st_alugcustcorr.contrato=st_alug_devolucao.contrato and dataliq='{dt_next_3.strftime("%Y-%m-%d")}'  \
 				where data='{dt_1.strftime("%Y-%m-%d")}' and qtde>0 AND st_alugcustcorr.cliente \
-				IN ('KAPITALO KAPPA MASTER FIM') and vencimento='{dt_next_3.strftime("%Y-%m-%d")}' \
+				IN ('{fundo}') and vencimento='{dt_next_3.strftime("%Y-%m-%d")}' \
 				group by registro,st_alugcustcorr.cliente, st_alugcustcorr.corretora, \
 				vencimento,taxa,cotliq, reversor, codigo, st_alugcustcorr.contrato, st_alugcustcorr.negeletr  \
 				UNION SELECT registro,st_alugcustcorr.cliente, st_alugcustcorr.corretora, 'D' as Tipo, \
@@ -183,20 +200,24 @@ def get_renovacoes(dt_next_3=None, dt_1=None):
 				from st_alugcustcorr left join st_alug_devolucao on \
 				st_alugcustcorr.contrato=st_alug_devolucao.contrato and dataliq='{dt_next_3.strftime("%Y-%m-%d")}'  \
 				where data='{dt_1.strftime("%Y-%m-%d")}' and qtde<0 AND st_alugcustcorr.cliente \
-				IN ('KAPITALO KAPPA MASTER FIM') and vencimento='{dt_next_3.strftime("%Y-%m-%d")}' \
+				IN ('{fundo}') and vencimento='{dt_next_3.strftime("%Y-%m-%d")}' \
 				group by registro,st_alugcustcorr.cliente, st_alugcustcorr.corretora, \
 				vencimento,taxa,cotliq, reversor, codigo, st_alugcustcorr.contrato, st_alugcustcorr.negeletr \
 				having ((avg(qtde)+ case when sum(qteliq) is null then '0' else  sum(qteliq) end) \
 				-sum(liquidacao))  <>0 order by corretora, codigo"""
 
     df = pd.read_sql(query, db_conn_risk)
+
+    db_conn_risk.close()
     return df
 
 
-def get_aluguel_posrecall(dt):
+def get_aluguel_posrecall(dt,fundo=None):
     if dt==None:
         dt = datetime.date.today()
-    
+    if fundo==None:
+        fundo='KAPITALO KAPPA MASTER FIM'
+
     db_conn_risk = psycopg2.connect(
     host=config.DB_RISK_HOST,
     dbname=config.DB_RISK_NAME,
@@ -205,9 +226,13 @@ def get_aluguel_posrecall(dt):
     )
     query = f"""SELECT Data, Contrato, corretora, vencimento, taxa * 100, Reversor, \
 				Codigo, Qtde from st_alugcustcorr WHERE Data>='{dt.strftime('%Y-%m-%d')}' \
-				and Cliente like 'KAPITALO KAPPA MASTER FIM%' \
+				and Cliente like '{fundo}%' \
 				and qtde<0 ORDER BY Data, Codigo, Corretora, Contrato"""
-    return pd.read_sql(query, db_conn_risk)
+    df=pd.read_sql(query, db_conn_risk)
+    db_conn_risk.close()
+    
+    return df 
+    
 
 
 # TAXAS DE ALUGUEL
@@ -249,6 +274,7 @@ def get_taxas(days, ticker_name=None, end=None):
 			where rptdt>'{start.strftime("%Y-%m-%d")}' and rptdt<='{end.strftime("%Y-%m-%d")}' and mktnm = 'Balcao' and tckrsymb='{ticker_name}';
 			"""
         df = pd.read_sql(query, db_conn_risk)
+        db_conn_risk.close()
         return df
     else:
         query = f"""SELECT rptdt, tckrsymb, sctyid, sctysrc, mktidrcd, isin, asst, qtyctrctsday, qtyshrday, valctrctsday, dnrminrate, dnravrgrate, dnrmaxrate, takrminrate, takravrgrate, takrmaxrate, mkt , mktnm, datasts \
@@ -256,6 +282,8 @@ def get_taxas(days, ticker_name=None, end=None):
 			where rptdt>'{start.strftime("%Y-%m-%d")}' and rptdt<='{end.strftime("%Y-%m-%d")}' and mktnm = 'Balcao';
 			"""
         df = pd.read_sql(query, db_conn_risk)
+        db_conn_risk.close()
+        
         return df
 
 
@@ -285,7 +313,7 @@ def get_taxa(ticker_name, pos):
         # df = df.groupby("ticker").sum()
         # df["avg_rate"] = df["s"] / df["quantity"]
         # tx = float(df.loc[ticker_name, "avg_rate"])
-
+    db_conn_risk.close()
     return tx
 
 
@@ -305,7 +333,7 @@ def get_ticker(dt_1):
 	where rptdt='{dt_1.strftime('%Y-%m-%d')}' and  mktnm = 'Balcao' ;
 	"""
     df = pd.read_sql(query, db_conn_risk)
-
+    db_conn_risk.close()
     return df["tckrsymb"]
 
 
@@ -325,6 +353,8 @@ def get_openpositions(dt_1):
 				WHERE rptdt = '{dt_1.strtime('%y-%M-%d')}'"
 
     df = pd.read_sql(query, db_conn_risk)
+
+    db_conn_risk.close()
     return df
 def single_insert(conn, insert_req):
     """Execute a single INSERT request"""
