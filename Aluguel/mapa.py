@@ -10,12 +10,17 @@ import pandas as pd
 import numpy as np
 import carteira_ibov
 import taxas
+import os
 pd.options.mode.chained_assignment = None  # default='warn'
 #
 
 
 memoize = {}
 
+
+parse_fundos = {
+	'KAPITALO MASTER I FUNDO DE INVESTIMENTO MULTIMERCADO': "KAPITALO KAPPA MASTER FIM",
+}
 
 def next_day(d):
 	global memoize
@@ -60,8 +65,14 @@ def main(fundo=None):
 	# df_corretagem= pd.read_excel(r'G:\Trading\K11\\Aluguel\Tables\Book_corretagens.xlsx')
 
 	df_pos = DB.get_equity_positions(fundo,dt_1)
-	df = pd.DataFrame(df_pos[["regexp_replace", "sum"]])
-	df.rename(columns={"regexp_replace": "codigo", "sum": "position"}, inplace=True)
+
+
+	df = pd.DataFrame(df_pos[['str_fundo',"regexp_replace", "sum"]])
+	df.rename(columns={"regexp_replace": "codigo", "sum": "position","str_fundo":"fundo"}, inplace=True)
+
+	df = df[df['fundo'].isin(['KAPITALO KAPPA MASTER FIM','KAPITALO KAPPA PREV MASTER FIM','KAPITALO K10 PREV MASTER FIM'])]
+
+	
 
 	df_ctosaluguel = DB.get_alugueis(dt_1, dt,fundo=fundo)
 
@@ -76,26 +87,29 @@ def main(fundo=None):
 	# df_ctosaluguel.to_excel("alug.xlsx")
 
 	df_doado = df_ctosaluguel[df_ctosaluguel["quantidade"] < 0]
-	df_doado = df_doado.groupby("codigo", as_index=False).agg(
+
+	df_doado = df_doado.groupby(['fundo',"codigo"], as_index=False).agg(
 		{"quantidade": sum, "value": sum}
 	)
+	
 	df_doado["taxa_doado"] = round(df_doado["value"] * 100 / df_doado["quantidade"], 2)
 	df_tomado = df_ctosaluguel[df_ctosaluguel["quantidade"] > 0]
-	df_tomado = df_tomado.groupby("codigo", as_index=False).agg(
+	df_tomado = df_tomado.groupby(['fundo',"codigo"], as_index=False).agg(
 		{"quantidade": sum, "value": sum}
 	)
 	df_tomado["taxa_tomado"] = round(
 		df_tomado["value"] * 100 / df_tomado["quantidade"], 2
 	)
 
-	df = pd.merge(df, df_doado, how="outer", on="codigo")
+	df = df.merge(df_doado, how="outer", on=["fundo","codigo"])
 	df.rename(
 		columns={"quantidade": "pos_doada", "value": "estimativa_doada"}, inplace=True
 	)
 
 	df["estimativa_doada"].fillna(0, inplace=True)
 
-	df = pd.merge(df, df_tomado, how="outer", on="codigo")
+	df = df.merge(df_tomado, how="outer", on=["fundo","codigo"])
+
 	df.rename(
 		columns={"quantidade": "pos_tomada", "value": "estimativa_tomada"}, inplace=True
 	)
@@ -106,23 +120,24 @@ def main(fundo=None):
 
 	df["estimativa_tomada"] = df["estimativa_tomada"].round(2)
 
-	df_ctosaluguel_trade = DB.get_alugueis_boletas(dt,fundo=fundo)
-	df_ctosaluguel_trade.rename(
-		columns={"dbl_quantidade": "quantidade", "str_papel": "codigo"}, inplace=True
-	)
+	df_ctosaluguel_trade = DB.get_alugueis_boletas(dt,fundo=None)
 
+	df_ctosaluguel_trade.rename(
+		columns={"dbl_quantidade": "quantidade", "str_papel": "codigo","str_fundo":"fundo"}, inplace=True
+	)
+	
 	df_doado_trade = df_ctosaluguel_trade[
 		(df_ctosaluguel_trade["quantidade"] < 0)
 		& (df_ctosaluguel_trade["ID"] == "Emprestimo")
 	]
-	df_doado_trade = df_doado_trade.groupby("codigo", as_index=False).agg(
+	df_doado_trade = df_doado_trade.groupby(["fundo","codigo"], as_index=False).agg(
 		{"quantidade": sum}
 	)
 	df_tomado_trade = df_ctosaluguel_trade[
 		(df_ctosaluguel_trade["quantidade"] > 0)
 		& (df_ctosaluguel_trade["ID"] == "Emprestimo")
 	]
-	df_tomado_trade = df_tomado_trade.groupby("codigo", as_index=False).agg(
+	df_tomado_trade = df_tomado_trade.groupby(["fundo","codigo"], as_index=False).agg(
 		{"quantidade": sum}
 	)
 	#
@@ -130,7 +145,7 @@ def main(fundo=None):
 		(df_ctosaluguel_trade["quantidade"] < 0)
 		& (df_ctosaluguel_trade["ID"] == "Devolucao")
 	]
-	df_doado_devol = df_doado_devol.groupby("codigo", as_index=False).agg(
+	df_doado_devol = df_doado_devol.groupby(["fundo","codigo"], as_index=False).agg(
 		{"quantidade": sum}
 	)
 	df_doado_devol["quantidade"] = -df_doado_devol["quantidade"]
@@ -138,21 +153,25 @@ def main(fundo=None):
 		(df_ctosaluguel_trade["quantidade"] > 0)
 		& (df_ctosaluguel_trade["ID"] == "Devolucao")
 	]
-	df_tomado_devol = df_tomado_devol.groupby("codigo", as_index=False).agg(
+	df_tomado_devol = df_tomado_devol.groupby(["fundo","codigo"], as_index=False).agg(
 		{"quantidade": sum}
 	)
 	df_tomado_devol["quantidade"] = -df_tomado_devol["quantidade"]
 
 	#
-	df = df.merge(df_doado_trade[["codigo", "quantidade"]], on="codigo", how="left")
+	df = df.merge(df_doado_trade[["fundo","codigo", "quantidade"]], on=["fundo","codigo"], how="left")
+
 	df.rename(columns={"quantidade": "trade_doado"}, inplace=True)
-	df = df.merge(df_tomado_trade[["codigo", "quantidade"]], on="codigo", how="left")
+	df = df.merge(df_tomado_trade[["fundo","codigo", "quantidade"]], on=["fundo","codigo"], how="left")
 	df.rename(columns={"quantidade": "trade_tomado"}, inplace=True)
 
-	df = df.merge(df_doado_devol[["codigo", "quantidade"]], on="codigo", how="left")
+
+	df = df.merge(df_doado_devol[["fundo","codigo", "quantidade"]], on=["fundo","codigo"], how="left")
 	df.rename(columns={"quantidade": "devol_doado"}, inplace=True)
-	df = df.merge(df_tomado_devol[["codigo", "quantidade"]], on="codigo", how="left")
+	df = df.merge(df_tomado_devol[["fundo","codigo", "quantidade"]], on=["fundo","codigo"], how="left")
 	df.rename(columns={"quantidade": "devol_tomado"}, inplace=True)
+
+
 
 	df["taxa_doado"].fillna(0, inplace=True)
 	df["taxa_tomado"].fillna(0, inplace=True)
@@ -167,7 +186,7 @@ def main(fundo=None):
 	df["trade_tomado"] = df["devol_tomado"] + df["trade_tomado"]
 
 	df["trade_doado"] = df["trade_doado"].apply(lambda x: 0 if x > 0 else x)
-
+	
 	df_ctosaluguel["vencimento"] = pd.to_datetime(
 		df_ctosaluguel["vencimento"]
 	).dt.strftime("%Y-%m-%d")
@@ -185,11 +204,11 @@ def main(fundo=None):
 		df_ctosaluguel["vencimento"] == dt_next_4.strftime("%Y-%m-%d")
 	]
 
-	df_vcto_0 = df_vcto_0.groupby("codigo", as_index=False).agg({"quantidade": sum})
-	df_vcto_1 = df_vcto_1.groupby("codigo", as_index=False).agg({"quantidade": sum})
-	df_vcto_2 = df_vcto_2.groupby("codigo", as_index=False).agg({"quantidade": sum})
-	df_vcto_3 = df_vcto_3.groupby("codigo", as_index=False).agg({"quantidade": sum})
-	df_vcto_4 = df_vcto_4.groupby("codigo", as_index=False).agg({"quantidade": sum})
+	df_vcto_0 = df_vcto_0.groupby(["fundo","codigo"], as_index=False).agg({"quantidade": sum})
+	df_vcto_1 = df_vcto_1.groupby(["fundo","codigo"], as_index=False).agg({"quantidade": sum})
+	df_vcto_2 = df_vcto_2.groupby(["fundo","codigo"], as_index=False).agg({"quantidade": sum})
+	df_vcto_3 = df_vcto_3.groupby(["fundo","codigo"], as_index=False).agg({"quantidade": sum})
+	df_vcto_4 = df_vcto_4.groupby(["fundo","codigo"], as_index=False).agg({"quantidade": sum})
 
 	df_vcto_0.rename(columns={"quantidade": vcto_0}, inplace=True)
 	df_vcto_1.rename(columns={"quantidade": vcto_1}, inplace=True)
@@ -197,11 +216,11 @@ def main(fundo=None):
 	df_vcto_3.rename(columns={"quantidade": vcto_3}, inplace=True)
 	df_vcto_4.rename(columns={"quantidade": vcto_4}, inplace=True)
 
-	df = df.merge(df_vcto_0[["codigo", vcto_0]], on="codigo", how="left")
-	df = df.merge(df_vcto_1[["codigo", vcto_1]], on="codigo", how="left")
-	df = df.merge(df_vcto_2[["codigo", vcto_2]], on="codigo", how="left")
-	df = df.merge(df_vcto_3[["codigo", vcto_3]], on="codigo", how="left")
-	df = df.merge(df_vcto_4[["codigo", vcto_4]], on="codigo", how="left")
+	df = df.merge(df_vcto_0[["fundo","codigo", vcto_0]], on=["fundo","codigo"], how="left")
+	df = df.merge(df_vcto_1[["fundo","codigo", vcto_1]], on=["fundo","codigo"], how="left")
+	df = df.merge(df_vcto_2[["fundo","codigo", vcto_2]], on=["fundo","codigo"], how="left")
+	df = df.merge(df_vcto_3[["fundo","codigo", vcto_3]], on=["fundo","codigo"], how="left")
+	df = df.merge(df_vcto_4[["fundo","codigo", vcto_4]], on=["fundo","codigo"], how="left")
 
 	# if not {vcto_0}.issubset(df.columns): df[vcto_0] = 0
 	#
@@ -211,17 +230,19 @@ def main(fundo=None):
 	df[vcto_3].fillna(0, inplace=True)
 	df[vcto_4].fillna(0, inplace=True)
 
+
 	# como considerar qdo nao tem vcto. Vai usar estas colunas depois
 
 	df["pos_doada"].fillna(0, inplace=True)
 	df["pos_tomada"].fillna(0, inplace=True)
 
 	## Movimentação em custódia
-	df_mov_0 = DB.get_equity_trades(fundo,dt_2)
-	df = df.merge(df_mov_0[["codigo", "qtd"]], on="codigo", how="outer")
+	df_mov_0 = DB.get_equity_trades(fundo,dt_2).rename(columns={'str_fundo':'fundo'})
+
+	df = df.merge(df_mov_0[["fundo","codigo", "qtd"]], on=["fundo","codigo"], how="left")
 	df.rename(columns={"qtd": "mov_0"}, inplace=True)
-	df_mov_1 = DB.get_equity_trades(fundo,dt_1)
-	df = df.merge(df_mov_1[["codigo", "qtd"]], on="codigo", how="outer")
+	df_mov_1 = DB.get_equity_trades(fundo,dt_1).rename(columns={'str_fundo':'fundo'})
+	df = df.merge(df_mov_1[["fundo","codigo", "qtd"]], on=["fundo","codigo"], how="left")
 	df.rename(columns={"qtd": "mov_1"}, inplace=True)
 
 	# df_mov_1 = DB.get_equity_trades(dt)
@@ -231,32 +252,34 @@ def main(fundo=None):
 	df["mov_0"].fillna(0, inplace=True)
 	df["mov_1"].fillna(0, inplace=True)
 	# df['mov_2']=0
-
+	
 	##
 	ibov = pd.DataFrame(carteira_ibov.consulta_ibov())
 	ibov = ibov[["cod", "theoricalQty", "reductor"]]
 	ibov.rename(columns={"cod": "codigo"}, inplace=True)
 
 	ibov["unidade"] = round(ibov["theoricalQty"] / ibov.iloc[0]["reductor"], 0) * (-200)
-
-	df = df.merge(ibov[["codigo", "unidade"]], on="codigo", how="outer")
+	ibov["fundo"] = "KAPITALO KAPPA MASTER FIM"
+	df = df.merge(ibov[["fundo","codigo", "unidade"]], on=["fundo","codigo"], how="left")
 	df.rename(columns={"unidade": "mov_2"}, inplace=True)
 
 	df["mov_2"].fillna(0, inplace=True)
 	##
+	
 
 	# recalls
-	recalls = DB.get_recalls(dt_3,fundo=fundo)
-	pos = DB.get_aluguel_posrecall(dt_4,fundo=fundo)
-
+	recalls = DB.get_recalls(dt_3,fundo=fundo).rename(columns={'str_fundo':'fundo'})
+	pos = DB.get_aluguel_posrecall(dt_4,fundo=fundo).rename(columns={'cliente':'fundo'})
+	
 	pos["data"] = pos["data"].apply(lambda x: next_day(x))
 	df_recall = pd.merge(
 		recalls,
 		pos,
-		left_on=["dte_databoleta", "int_codcontrato"],
-		right_on=["data", "contrato"],
-		how="outer",
+		left_on=['fundo',"dte_databoleta", "int_codcontrato"],
+		right_on=['fundo',"data", "contrato"],
+		how="left",
 	)
+	
 	df_recall = df_recall[[c for c in pos] + ["dbl_quantidade"]].fillna(0)
 	df_recall = df_recall.rename(columns={"dbl_quantidade": "recallD3"})
 	df_recall["recallD3"] *= -1
@@ -309,7 +332,8 @@ def main(fundo=None):
 			)
 
 	df_recall_last = df_recall[df_recall["data"] == dt]
-	df_recall_g = df_recall_last.groupby("codigo", as_index=False).agg(
+	
+	df_recall_g = df_recall_last.groupby(["fundo","codigo"], as_index=False).agg(
 		{"PendRecallD1": sum, "PendRecallD2": sum, "PendRecallD3": sum}
 	)
 
@@ -327,17 +351,23 @@ def main(fundo=None):
 		## Fundo
 
 		
-		df_recall_tomador=df_recall_tomador[df_recall_tomador['Cliente']=='KAPITALO MASTER I FUNDO DE INVESTIMENTO MULTIMERCADO']
+		# df_recall_tomador=df_recall_tomador[df_recall_tomador['Cliente']==]
+		df_recall_tomador['Cliente'] = df_recall_tomador['Cliente'].map(parse_fundos) 
+		
+		df_recall_tomador.fillna(0)
+		df_recall_tomador = df_recall_tomador[df_recall_tomador['Cliente']=='KAPITALO KAPPA MASTER FIM']
 
-		
-		df_recall_tomador=df_recall_tomador[['Cód. de Neg. do Ativo Obj.','Quantidade Liquidação Solicitada','Última data de liquidação']]
+		df_recall_tomador=df_recall_tomador[['Cliente','Cód. de Neg. do Ativo Obj.','Quantidade Liquidação Solicitada','Última data de liquidação']]
 		df_recall_tomador=pd.pivot_table(df_recall_tomador,values='Quantidade Liquidação Solicitada',index='Cód. de Neg. do Ativo Obj.',columns='Última data de liquidação',aggfunc=np.sum)
-		
-		df_rec=pd.DataFrame(columns=['codigo',"PendRecallD1", "PendRecallD2", "PendRecallD3"])
+
+		df_rec=pd.DataFrame(columns=["fundo",'codigo',"PendRecallD1", "PendRecallD2", "PendRecallD3"])
 		
 		df_rec['codigo']=df_recall_tomador.index.tolist()
+		df_rec['fundo'] = 'KAPITALO KAPPA MASTER FIM'
+		
 		try:
 			df_rec['PendRecallD1']=[(-1)*x for x in df_recall_tomador[dt_next_1.strftime('%Y-%m-%d')].tolist()]
+			
 		except:
 			df_rec['PendRecallD1']=0
 		try:
@@ -350,12 +380,14 @@ def main(fundo=None):
 			df_rec['PendRecallD3']=0
 
 		df_rec=df_rec.fillna(0)
-		df_recall_g=pd.concat([df_recall_g,df_rec]).groupby(['codigo']).sum().reset_index()
+
+		df_recall_g=pd.concat([df_recall_g,df_rec]).groupby(['fundo','codigo']).sum().reset_index()
 		df = df.merge(
-			df_recall_g[["codigo", "PendRecallD1", "PendRecallD2", "PendRecallD3"]],
-			on="codigo",
-			how="outer",
+			df_recall_g[["fundo","codigo", "PendRecallD1", "PendRecallD2", "PendRecallD3"]],
+			on=["fundo","codigo"],
+			how="left",
 		)
+		
 		
 	else:
 		df = df.merge(
@@ -367,7 +399,7 @@ def main(fundo=None):
 	df["PendRecallD1"].fillna(0, inplace=True)
 	df["PendRecallD2"].fillna(0, inplace=True)
 	df["PendRecallD3"].fillna(0, inplace=True)
-	# print(df)
+
 
 	df["position"].fillna(0, inplace=True)
 
@@ -401,10 +433,13 @@ def main(fundo=None):
 	df["to_borrow_3"] = np.minimum(
 		0, df["custodia_3"] - df["to_borrow_0"] - df["to_borrow_1"] - df["to_borrow_2"]
 	)
+
 	df["to_borrow_3"].fillna(0, inplace=True)
 
+
+
 	janela_borrow = df[df["to_borrow_0"] != 0]
-	janela_borrow = janela_borrow[["codigo", "to_borrow_0"]]
+	janela_borrow = janela_borrow[["fundo","codigo", "to_borrow_0"]]
 
 	janela_borrow.to_excel(
 		"G:\Trading\K11\\Aluguel\Arquivos\Tomar\Janela\\"
@@ -414,7 +449,7 @@ def main(fundo=None):
 	)
 
 	dia_borrow = df[df["to_borrow_1"] != 0]
-	dia_borrow = dia_borrow[["codigo", "to_borrow_1"]]
+	dia_borrow = dia_borrow[["fundo","codigo", "to_borrow_1"]]
 
 	dia_borrow.to_excel(
 		"G:\Trading\K11\\Aluguel\Arquivos\Tomar\Dia\\"
@@ -470,20 +505,30 @@ def main(fundo=None):
 
 	lend_dia = df[df["to_lend"] != 0]
 
-	lend_dia = lend_dia[["codigo", "to_lend"]]
+	
+
+
+
+	lend_dia = lend_dia[["fundo","codigo", "to_lend"]]
+
+	lend_dia = DB.check_mesa(lend_dia).drop_duplicates()
+
+	
 
 	lend_dia.to_excel(
 		"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\\"
-		+ "Kappa_lend_"
+		+ "K11_lend_"
 		+ dt.strftime("%d-%m-%Y")
 		+ ".xlsx"
 	)
 	lend_agg = df[df["to_lend Dia agg"] != 0]
-	lend_agg = lend_agg[['codigo','to_lend Dia agg']]
 
-	lend_agg.to_excel(f"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\Agg\Kappa_lend_agg_{dt.strftime('%d-%m-%Y')}.xlsx")
 
-	lend_dia = lend_dia[["codigo", "to_lend"]]
+	lend_agg = lend_agg[["fundo",'codigo','to_lend Dia agg']]
+
+	lend_agg.to_excel(f"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\Agg\K11_lend_agg_{dt.strftime('%d-%m-%Y')}.xlsx")
+
+	lend_dia = lend_dia[["fundo","codigo", "to_lend"]]
 
 	df["to_lend Janela"] = np.maximum(np.maximum(0, df["to_lend"]) - df["mov_0"], 0)
 
@@ -491,7 +536,7 @@ def main(fundo=None):
 	lend_janela = lend_janela[["codigo", "to_lend Janela"]]
 	lend_janela.to_excel(
 		"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Janela\\"
-		+ "Kappa_lend_"
+		+ "K11_lend_"
 		+ dt.strftime("%d-%m-%Y")
 		+ ".xlsx"
 	)
@@ -510,25 +555,35 @@ def main(fundo=None):
 	df_devol_tomado = df_ctosaluguel.sort_values(["codigo", "value", "registro"])
 	df_devol_tomado = df_devol_tomado[df_devol_tomado["tipo"] == "T"]
 
+
+	df.to_excel('G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')
+
 	return df
 
 
 def get_borrow_janela(df):
 	janela_borrow = df[df["to_borrow_0"] != 0]
-	janela_borrow = janela_borrow[["codigo", "to_borrow_0"]]
+	janela_borrow = janela_borrow[["fundo","codigo", "to_borrow_0"]]
 
 	return janela_borrow
 
 
 def get_borrow_dia(df):
 	dia_borrow = df[df["to_borrow_1"] != 0]
-	dia_borrow = dia_borrow[["codigo", "to_borrow_1"]]
+	dia_borrow = dia_borrow[["fundo","codigo", "to_borrow_1"]]
 
 	return dia_borrow
 
 
 def get_map_renov(df):
-	return df[["codigo", "position", "to_borrow_3", "pos_doada", "taxa_doado"]]
+	if datetime.datetime.fromtimestamp(os.path.getmtime(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')).date() == datetime.date.today():
+		df = pd.read_excel(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')	
+	else:
+		df = main()
+
+
+
+	return df[["fundo","codigo", "position", "to_borrow_3", "pos_doada", "taxa_doado"]]
 
 
 def get_lend_janela(df):
@@ -548,7 +603,7 @@ def get_lend_dia(df):
 
 
 def get_df_devol(df):
-	return df[["codigo", "devol_tomador"]]
+	return df[["fundo","codigo", "devol_tomador"]]
 
 
 def get_df_devol_doador(df):
@@ -558,19 +613,31 @@ def get_df_devol_doador(df):
 
 def get_df_custodia(df):
 
-	return df[["codigo", "position", "to_lend Dia agg",'to_borrow_1']]
+	return df[["fundo","codigo", "position", "to_lend Dia agg",'to_borrow_1']]
 
 
 def map(df):
 	return df[
-		["codigo", "position", "to_lend", "to_lend Dia agg", "to_lend Janela", "taxa"]
+		["fundo","codigo", "position", "to_lend", "to_lend Dia agg", "to_lend Janela", "taxa"]
 	]
 
 
-# if __name__ == "__main__":
-	
-# 	# main()
 
+
+
+
+if __name__ == "__main__":
+	# pass
+	df = main()
+	# print(df)
+
+	# print(get_borrow_janela(df))
+
+	# loan_list = pd.read_excel('G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\K11_lend_30-09-2022.xlsx')
+
+
+	# print(loan_list)
+	# print(DB.check_mesa(loan_list,mesa='Kapitalo 11.1'))
 
 ###
 # Demonstrar o que pode ser doado para o dia e para a janela (lembrar que o que volta de aluguel

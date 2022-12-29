@@ -16,6 +16,7 @@ import psycopg2
 import pandas as pd
 import config
 import os
+import streamlit as st
 from boletas import email_gmail
 pd.options.mode.chained_assignment = None  # default='warn'
 # df = mapa.main()
@@ -60,7 +61,7 @@ def get_dt(x=None):
 def get_dt_1(x=None):
     if x==None:
         dt = datetime.date.today()
-        dt_1 = workdays.workday(dt, -1, holidays_b3)
+        dt_1 = workdays.workday(dt, -1, holidays_br)
     return dt_1
 
 # def importa_trades_bbi():
@@ -70,9 +71,16 @@ def get_dt_1(x=None):
 # def renov_bbi():
 
 #     return get_bbi.importa_renovacoes_aluguel_bbi()
-
+@st.cache
 def main(fundo):
-    df = mapa.main(fundo)
+    
+    if datetime.datetime.fromtimestamp(os.path.getmtime(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')).date() == datetime.date.today():
+        df = pd.read_excel(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')
+    else:
+        df = mapa.main()
+
+
+
     # devol = fill_devol(df)
     # devol_doador=fill_devol_doador(df)
     # boletas_dia = DB.get_alugueis_boletas(fundo,datetime.date.today())
@@ -105,7 +113,7 @@ def main(fundo):
     # dt_next_5 = workdays.workday(dt, 5, holidays_b3)
     # vcto_5 = "venc " + dt_next_5.strftime("%d/%m/%Y")
     return df
-
+@st.cache
 def update_sub(fundo):
     queryf="select * from aluguel_sub"
     db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
@@ -128,7 +136,7 @@ def update_sub(fundo):
             print(trade.iloc[index])
     db_conn_k11.close()
 
-
+@st.cache
 def get_ibov_rate():
     query="select dte_data, rate as IBOV from ibov_index_rate"
     db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
@@ -137,7 +145,7 @@ def get_ibov_rate():
     return ibov_rate
 
 
-
+@st.cache
 def get_risk_taxes(stocks):
     query="select rptdt as dte_data,takravrgrate,tckrsymb from b3up2data.equities_assetloanfilev2 where mktnm='Balcao'"
     db_conn_risk = psycopg2.connect(host=config.DB_RISK_HOST, dbname=config.DB_RISK_NAME , user=config.DB_RISK_USER, password=config.DB_RISK_PASS)
@@ -149,7 +157,7 @@ def get_risk_taxes(stocks):
 # if __name__ =='__main__':
 #     update_sub(
 
-
+@st.cache
 def saldo_btc():
 
     directory = "G://Trading//K11//Aluguel//Arquivos//Disponibilidade//"

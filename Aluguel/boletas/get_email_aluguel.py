@@ -20,6 +20,26 @@ def get_email_mirae():
         str_search='(X-GM-RAW "k11@kapitalo.com.br Mirae has:attachment newer_than:8h")',
     )
 
+def get_email_ubs():
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//UBS//",
+        [".xls", ".xlsm", ".xlsx"],
+        "AluguelUBS",
+        str_search='(X-GM-RAW "k11@kapitalo.com.br btc UBS has:attachment newer_than:8h")',
+    )
+def get_email_xp():
+    email_gmail.get_mail_files(
+        ["guilherme.felipe@xpi.com.br"],
+        "",
+        "G://Trading//K11//Aluguel//Trades//XP//",
+        [".xls", ".xlsm", ".xlsx"],
+        "AluguelXP",
+        str_search='(X-GM-RAW "k11@kapitalo.com.br BTC - XP has:attachment newer_than:8h")',
+        
+    )
+
 
 def get_email_bofa():
     email_gmail.get_mail_files(
@@ -93,15 +113,7 @@ def get_email_renov_orama():
     )
 
 
-def get_email_ubs():
-    email_gmail.get_mail_files(
-        [],
-        "",
-        "G://Trading//K11//Aluguel//Trades//UBS//",
-        [".xls", ".xlsm", ".xlsx"],
-        "AluguelUBS",
-        str_search='(X-GM-RAW "k11@kapitalo.com.br btc UBS has:attachment newer_than:8h")',
-    )
+
 
 
 def get_email_renov_itau():
@@ -145,6 +157,17 @@ def get_email_terra():
         [".xlsx"],
         "AluguelTerra",
         str_search='(X-GM-RAW "@terrainvestimentos.com BTC has:attachment newer_than:8h")',
+    )
+
+
+def get_email_bradesco():
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Bradesco//",
+        [".xlsx"],
+        "AluguelBradesco",
+        str_search='(X-GM-RAW "@bradescobbi.com.br KAPITALO - KAPPA has:attachment newer_than:8h")',
     )
 
 
