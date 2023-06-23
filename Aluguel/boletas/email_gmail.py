@@ -85,7 +85,7 @@ def generate_mail_messages(gmail_user_name, p_word, resume_file, str_search):
     imap_session.logout()
 
 
-def save_attachments(message, directory, extensions, filename2save):
+def save_attachments(message, directory, extensions, filename2save,type):
 
     # L = [f for f in os.listdir(D) if os.path.splitext(f)[1] in extensions]
     file_names = []
@@ -162,15 +162,15 @@ def save_attachments(message, directory, extensions, filename2save):
 
                 if filename2save != "":
                     msg_date = msgtime.strftime("%Y%m%d")
-                    if "borrow" in file_name.lower():
 
+                    if "janela" in type:
                         new_file_name = (
-                            f"{filename2save}_borrow_{msg_date}{file_extension}"
+                            f"{filename2save}_janela_{msg_date}{file_extension}"
                         )
-                    elif "loan" in file_name.lower():
+                    elif "dia" in type:
 
                         new_file_name = (
-                            f"{filename2save}_loan_{msg_date}{file_extension}"
+                            f"{filename2save}_dia_{msg_date}{file_extension}"
                         )
 
                     else:
@@ -222,9 +222,11 @@ def get_mail_files(
     subject,
     str_local_directory,
     extensions,
+    type,
     filename2save="",
     att_newer_than=24,
     str_search=None,
+    
 ):
     if not str_search:
         str_search = create_search_query(senders, subject, att_newer_than)
@@ -248,7 +250,7 @@ def get_mail_files(
         # print(msg)
 
         f_name, texts = save_attachments(
-            msg, str_local_directory, extensions, filename2save
+            message = msg, directory = str_local_directory, extensions = extensions, filename2save = filename2save,type=type
         )
         [f_names.append(f) for f in f_name]
         [t_texts.append(t) for t in texts]

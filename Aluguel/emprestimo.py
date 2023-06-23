@@ -26,46 +26,53 @@ def compara_taxa(tx_real, tx_media):
         return "Devolver"
 
 def main(main_df:pd.DataFrame,dt=None):
-    df = pd.read_excel(r"G:\Trading\K11\Python\Aluguel\Tables\Book_corretagens.xlsx")
+    # df = pd.read_excel(r"G:\Trading\K11\Python\Aluguel\Tables\Book_corretagens.xlsx")
 
     
     if dt==None:
         dt = datetime.date.today()
         dt_1 = workdays.workday(dt, -1, holidays_b3)
-        dt_next_5 = workdays.workday(dt, 5, holidays_b3)
+        dt_next_5 = workdays.workday(dt_1, 4, holidays_b3)
         
 
 
 
     ##Um dia a frente para excluir as devoluções feitas devido a renovação
-    emprestimos_abertos = pd.DataFrame(DB.get_alugueis(dt_1=dt_1, dt_liq=dt_next_5))
+    emprestimos_abertos = pd.DataFrame(DB.get_alugueis_devol(dt_1=dt_1, dt_liq=dt_next_5))
+    # emprestimos_abertosv2 = pd.read_excel(r"C:\Users\joao.ramalho\Documents\GitHub\BTC\Aluguel\ctos_btc.xlsx")
+
+
+
+    # emprestimos_abertosv2 = emprestimos_abertosv2[['str_numcontrato','dbl_quantidade']].rename(columns={'str_numcontrato':'contrato','dbl_quantidade':'new lote'})
+
+    
 
     # saldo_custodia = mapa.get_df_custodia(main_df)
 
+
+    emprestimos_abertos.columns = ['data','fundo','corretora','tipo','taxa','vencimento','preco','reversivel','codigo','contrato','quantidade']
+
+    emprestimos_abertos = emprestimos_abertos[['data','fundo','corretora','tipo','taxa','vencimento','preco','reversivel','codigo','contrato','quantidade']]
+
+
     emprestimos_abertos_tomador = emprestimos_abertos[emprestimos_abertos["tipo"] == "T"]
 
-
-    # emprestimos_abertos_doador = emprestimos_abertos[emprestimos_abertos["tipo"] == "D"]
-
-
-
-
     emprestimos_abertos_tomador["taxa"] = (
-    emprestimos_abertos_tomador["taxa"].apply(lambda x: x * 100).astype(float)
+    emprestimos_abertos_tomador["taxa"].apply(lambda x: round(x,2) ).astype(float)
     )
 
     emprestimos_abertos_tomador["corretora"] = emprestimos_abertos_tomador[
     "corretora"
     ].astype(str)
 
-    emprestimos_abertos_tomador["taxa corretagem"] = emprestimos_abertos_tomador.apply(
-    lambda row: taxas.taxa_corretagem_aluguel(df, row["corretora"], "T", row["taxa"]),
-    axis=1,
-    )
-
-    emprestimos_abertos_tomador["negeletr type"] = emprestimos_abertos_tomador[
-    "negeletr"
-    ].apply(lambda x: "R" if (x == False) else "N")
+    # emprestimos_abertos_tomador["taxa corretagem"] = emprestimos_abertos_tomador.apply(
+    # lambda row: taxas.taxa_corretagem_aluguel(df, row["corretora"], "T", row["taxa"]),
+    # axis=1,
+    # )
+    emprestimos_abertos_tomador["negeletr type"] = 'R'
+    # emprestimos_abertos_tomador["negeletr type"] = emprestimos_abertos_tomador[
+    # "negeletr"cd ..
+    # ].apply(lambda x: "R" if (x == False) else "N")
 
     emprestimos_abertos_tomador["taxa b3"] = emprestimos_abertos_tomador.apply(
     lambda row: taxas.calculo_b3(taxa=row["taxa"], tipo_registro=row["negeletr type"]),
@@ -73,8 +80,7 @@ def main(main_df:pd.DataFrame,dt=None):
     )
 
     emprestimos_abertos_tomador["taxa real"] = (
-    emprestimos_abertos_tomador["taxa"]
-    + emprestimos_abertos_tomador["taxa corretagem"]
+    emprestimos_abertos_tomador["taxa"]*1.1
     + emprestimos_abertos_tomador["taxa b3"]
     )
 

@@ -12,13 +12,124 @@ from zeep import Client
 from zeep.transports import Transport
 import workdays
 import warnings
+import requests
+import warnings
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
-warnings.filterwarnings("ignore")
+
+
 ACCOUNT = "270366"
 USERNAME = "kap_wsrv"
 PASSWORD = "kjkOpL%*67Fg1!*%"
 
+bbi_usuario = 'kap_wsrv'
+bbi_senha = 'kjkOpL%*67Fg1!*%'
+
+depara_corretoras = {
+    '0': 'Bradesco',
+    '107': 'Terra',
+    '1130': 'FC Stone',
+    '114': 'Itau',
+    '120': 'Plural',
+    '122': 'Liquidez',
+    '127': 'Convenção',
+    '13': 'Merrill Lynch',
+    '147': 'Ativa',
+    '15': 'Guide',
+    '16': 'JP Morgan',
+    '174': 'Bradesco',  # 'Elite',
+    '190': 'Warren',
+    '1982': 'Modal',
+    '23': 'Concordia',
+    '238': 'Goldman',
+    '27': 'Santander',
+    '3': 'XP',
+    '3701': 'Orama',
+    '39': 'Agora',
+    '40': 'Morgan Stanley',
+    '45': 'Credit-Suisse',
+    '59': 'Safra',
+    '6003': 'C6',
+    '72': 'Bradesco',
+    '77': 'Citi',
+    '8': 'Link',
+    '85': 'BTG Pactual',
+    '88': 'Capital Markets',
+    '92': 'Renascença',
+    '262': 'Mirae',
+    '1026': 'BTG Pactual',
+}
+
+depara_fundos_bbi = {
+    "493896": "KAPITALO ALPHA GLOBAL MASTER FIM IE",
+    "684407": "KAPITALO ARGUS MASTER FIA",
+    "287587": "KAPITALO GAIA MASTER FIM",
+    "508332": "KAPITALO K10 MASTER FIM",
+    "683603": "KAPITALO K10 PREV MASTER FIM",
+    "270366": "KAPITALO KAPPA MASTER FIM",
+    "684673": "KAPITALO KAPPA PREV MASTER FIM",
+    "288032": "KAPITALO MASTER III FIM IE",
+    "288668": "KAPITALO MASTER IV FIM",
+    "684589": "KAPITALO MASTER V FIM",
+    "282782": "KAPITALO SIGMA LLC",
+    "494043": "KAPITALO TARKUS MASTER FIA",
+    "270361": "KAPITALO TAU MASTER FIM",
+    "684473": "KAPITALO ZETA MASTER FIA",
+    "270363": "KAPITALO ZETA MASTER FIM",
+}
+
+
+
 path = "G:\Trading\K11\Aluguel\Renovacoes_bbi\\"
+
+def req_mov_alugueis_solicitacao_liq(data):
+    url = 'https://smart.bradescobbi.com.br:44810/ServerWebServiceSM?wsdl'
+    data = pd.to_datetime(data)
+
+    cols_target = ['tipo', 'executor', 'nomeexecutor', 'cliente', 'contrato', 'carteira', 'codneg', 'qtde', 'qtdeorig',
+                   'taxa', 'inicio', 'vencimento', 'precomedio', 'contraparte', 'solicitante', 'datalimite', 'tipoexec']
+
+    # Requisição (resultado em xml)
+    session = requests.Session()
+    session.verify = False
+
+    transport = Transport(session=session)
+
+    client = Client(url, transport=transport)
+    res_xml_str = client.service.ObtemAluguelSolicLiq(bbi_usuario, bbi_senha, data.strftime('%d/%m/%Y'), '')
+
+    # Converte resultado da requisição para dict
+    res = xmltodict.parse(res_xml_str)
+
+    if not res['obtemAluguelSolicLiq']:
+        return pd.DataFrame(columns=cols_target)
+
+    # Dataframe com o resultado
+    df = pd.DataFrame(xmltodict.parse(res_xml_str)['obtemAluguelSolicLiq']['item'])
+
+    # Ajustar floats
+    cols = ['precomedio', 'taxa', 'qtde', 'qtdeorig']
+
+    for col in cols:
+        df[col] = df[col].fillna('0').str.replace(',', '.').astype(float).round(10)
+
+    # Ajustar datas
+    cols = ['inicio', 'vencimento']
+    for col in cols:
+        df[col] = pd.to_datetime(df[col].str[:10], format='%d/%m/%Y')
+
+    cols = ['datalimite']
+    for col in cols:
+        df[col] = pd.to_datetime(df[col].str[:10], format='%Y-%m-%d')
+
+    # Depara com o fundo e corretora no padrao kapitalo
+    df['Fundo_Kptl'] = df['cliente'].replace(depara_fundos_bbi)
+    df['Corretora_Kptl'] = df['executor'].replace(depara_corretoras)
+
+    # Encerrar e retornar
+    transport.session.close()
+    return df
+
 
 
 def importa_renovacoes_aluguel_bbi():
@@ -118,6 +229,103 @@ def importa_trades_bbi():
     except: 
         trades_bbi=pd.DataFrame()
         return trades_bbi
+
+
+def req_mov_alugueis_liquidacao(data):
+    url = 'https://smart.bradescobbi.com.br:44810/ServerWebServiceSM?wsdl'
+    data = pd.to_datetime(data)
+
+    cols_target = ['tipo', 'partexec', 'nmcorret', 'codcli', 'numcotr', 'codcart', 'codneg', 'qtde', 'qtdeorig',
+                   'dataaber', 'datavenc', 'preco', 'taxa', 'dataliq', 'dias', 'valor', 'valbrut', 'valemolcblc',
+                   'valir', 'tipoexec', 'corretcarrying', 'corretexecutor']
+
+    # Requisição (resultado em xml)
+    session = requests.Session()
+    session.verify = False
+
+    transport = Transport(session=session)
+
+    client = Client(url, transport=transport)
+    res_xml_str = client.service.ObtemAluguelMovLiq(bbi_usuario, bbi_senha, data.strftime('%d/%m/%Y'), '')
+
+    # Converte resultado da requisição para dict
+    res = xmltodict.parse(res_xml_str)
+
+    if not res['obtemAluguelMovLiq']:
+        return pd.DataFrame(columns=cols_target)
+
+    # Dataframe com o resultado
+    df = pd.DataFrame(xmltodict.parse(res_xml_str)['obtemAluguelMovLiq']['item'])
+
+    # Ajustar floats
+    cols = ['preco', 'taxa', 'valor', 'valbrut', 'corretcarrying', 'corretexecutor', 'qtde']
+
+    for col in cols:
+        df[col] = df[col].fillna('0').str.replace(',', '.').astype(float).round(10)
+
+    # Ajustar datas
+    cols = ['dataaber', 'datavenc', 'dataliq']
+    for col in cols:
+        df[col] = pd.to_datetime(df[col].str[:10], format='%d/%m/%Y')
+
+    # Depara com o fundo e corretora no padrao kapitalo
+    df['Fundo_Kptl'] = df['codcli'].replace(depara_fundos_bbi)
+    df['Corretora_Kptl'] = df['partexec'].replace(depara_corretoras)
+
+    # Encerrar e retornar
+    transport.session.close()
+    return df
+
+
+def req_mov_alugueis_solicitacao_liq(data):
+    url = 'https://smart.bradescobbi.com.br:44810/ServerWebServiceSM?wsdl'
+    data = pd.to_datetime(data)
+
+    cols_target = ['tipo', 'executor', 'nomeexecutor', 'cliente', 'contrato', 'carteira', 'codneg', 'qtde', 'qtdeorig',
+                   'taxa', 'inicio', 'vencimento', 'precomedio', 'contraparte', 'solicitante', 'datalimite', 'tipoexec']
+
+    # Requisição (resultado em xml)
+    session = requests.Session()
+    session.verify = False
+
+    transport = Transport(session=session)
+
+    client = Client(url, transport=transport)
+    res_xml_str = client.service.ObtemAluguelSolicLiq(bbi_usuario, bbi_senha, data.strftime('%d/%m/%Y'), '')
+
+    # Converte resultado da requisição para dict
+    res = xmltodict.parse(res_xml_str)
+
+    if not res['obtemAluguelSolicLiq']:
+        return pd.DataFrame(columns=cols_target)
+
+    # Dataframe com o resultado
+    df = pd.DataFrame(xmltodict.parse(res_xml_str)['obtemAluguelSolicLiq']['item'])
+
+    # Ajustar floats
+    cols = ['precomedio', 'taxa', 'qtde', 'qtdeorig']
+
+    for col in cols:
+        df[col] = df[col].fillna('0').str.replace(',', '.').astype(float).round(10)
+
+    # Ajustar datas
+    cols = ['inicio', 'vencimento']
+    for col in cols:
+        df[col] = pd.to_datetime(df[col].str[:10], format='%d/%m/%Y')
+
+    cols = ['datalimite']
+    for col in cols:
+        df[col] = pd.to_datetime(df[col].str[:10], format='%Y-%m-%d')
+
+    # Depara com o fundo e corretora no padrao kapitalo
+    df['Fundo_Kptl'] = df['cliente'].replace(depara_fundos_bbi)
+    df['Corretora_Kptl'] = df['executor'].replace(depara_corretoras)
+
+    # Encerrar e retornar
+    transport.session.close()
+    return df
+
+
 
 # df = importa_trades_bbi()
 # df.to_excel("teste.xlsx")

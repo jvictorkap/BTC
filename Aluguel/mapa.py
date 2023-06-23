@@ -71,7 +71,7 @@ def main(fundo=None):
 	df.rename(columns={"regexp_replace": "codigo", "sum": "position","str_fundo":"fundo"}, inplace=True)
 
 	df = df[df['fundo'].isin(['KAPITALO KAPPA MASTER FIM','KAPITALO KAPPA PREV MASTER FIM','KAPITALO K10 PREV MASTER FIM'])]
-
+# df = df[df['fundo'].isin(['KAPITALO KAPPA MASTER FIM','KAPITALO KAPPA PREV MASTER FIM','KAPITALO K10 PREV MASTER FIM',"KAPITALO ZETA MASTER FIM", "KAPITALO ZETA MASTER FIA", "KAPITALO SIGMA LLC"])]
 	
 
 	df_ctosaluguel = DB.get_alugueis(dt_1, dt,fundo=fundo)
@@ -346,7 +346,7 @@ def main(fundo=None):
 		df_recall_tomador=pd.read_excel(open('G://Trading//K11//Aluguel//Recall//RECALL_BRAD_BBI_KAPITALO_'+dt_1.strftime('%d%m%Y')+'.xlsx', 'rb'),
 		sheet_name='Planilha1')
 
-
+	
 	if not df_recall_tomador.empty:
 		## Fundo
 
@@ -356,9 +356,10 @@ def main(fundo=None):
 		
 		df_recall_tomador.fillna(0)
 		df_recall_tomador = df_recall_tomador[df_recall_tomador['Cliente']=='KAPITALO KAPPA MASTER FIM']
-
-		df_recall_tomador=df_recall_tomador[['Cliente','Cód. de Neg. do Ativo Obj.','Quantidade Liquidação Solicitada','Última data de liquidação']]
-		df_recall_tomador=pd.pivot_table(df_recall_tomador,values='Quantidade Liquidação Solicitada',index='Cód. de Neg. do Ativo Obj.',columns='Última data de liquidação',aggfunc=np.sum)
+		
+		df_recall_tomador=df_recall_tomador[['Cliente','Cód. de Neg. do Ativo Obj.','Quantidade liquidação Solicitada','Última data de liquidação']]
+		
+		df_recall_tomador=pd.pivot_table(df_recall_tomador,values='Quantidade liquidação Solicitada',index='Cód. de Neg. do Ativo Obj.',columns='Última data de liquidação',aggfunc=np.sum)
 
 		df_rec=pd.DataFrame(columns=["fundo",'codigo',"PendRecallD1", "PendRecallD2", "PendRecallD3"])
 		
@@ -575,7 +576,7 @@ def get_borrow_dia(df):
 	return dia_borrow
 
 
-def get_map_renov(df):
+def get_map_renov(df=None):
 	if datetime.datetime.fromtimestamp(os.path.getmtime(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')).date() == datetime.date.today():
 		df = pd.read_excel(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')	
 	else:
@@ -603,7 +604,7 @@ def get_lend_dia(df):
 
 
 def get_df_devol(df):
-	return df[["fundo","codigo", "devol_tomador"]]
+	return df[["fundo","codigo", "devol_tomador_of"]]
 
 
 def get_df_devol_doador(df):
@@ -613,7 +614,7 @@ def get_df_devol_doador(df):
 
 def get_df_custodia(df):
 
-	return df[["fundo","codigo", "position", "to_lend Dia agg",'to_borrow_1']]
+	return df[["fundo","codigo", "position", "to_lend Dia agg",'to_borrow_1','custodia_0','custodia_1']]
 
 
 def map(df):

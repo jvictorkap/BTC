@@ -1,5 +1,6 @@
 from datetime import timedelta
 import datetime as dt
+import datetime
 import psycopg2
 
 # started from the code of Casey Webster at
@@ -26,14 +27,13 @@ def load_holidays(calendar="BR"):
             holidays = [item[0] for item in cursor.fetchall()]
             db_conn.close()
             return holidays
-        db_conn.close()
     except Exception as e:
         print(str(e))
     return
 
 
 def networkdays(start_date, end_date, holidays=[], weekends=default_weekends):
-    delta_days = (end_date - start_date).days + 1
+    delta_days = (end_date - start_date).days
     full_weeks, extra_days = divmod(delta_days, 7)
     # num_workdays = how many days/week you work * total # of weeks
     num_workdays = (full_weeks + 1) * (7 - len(weekends))
@@ -51,6 +51,14 @@ def networkdays(start_date, end_date, holidays=[], weekends=default_weekends):
 
 
 def _in_between(a, b, x):
+
+    if isinstance(a, dt.datetime):
+        a = a.date()
+    if isinstance(b, dt.datetime):
+        b = b.date()
+    if isinstance(x, dt.datetime):
+        x = x.date()
+
     return a <= x <= b or b <= x <= a
 
 
@@ -112,5 +120,5 @@ def num_dus(start_date, end_date, holidays=[], weekends=default_weekends):
     return networkdays(start_date, end_date, holidays) - 1
 
 
-# dia = dt.date(2019,1,18)
-# print(next_workday(dia))
+if __name__ == '__main__':
+    print(workday(datetime.date.today(), 3, holidays=load_holidays("BR")))

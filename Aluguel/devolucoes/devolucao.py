@@ -20,35 +20,50 @@ holidays_br = workdays.load_holidays("BR")
 holidays_b3 = workdays.load_holidays("B3")
 
 
+def fill_devol(df_devol: pd.DataFrame,ctos: pd.DataFrame):
+
+
+
+
+    return 0
+
+
+
+
+
 def fill_devol(main_df: pd.DataFrame):
-
     df = get_df_devol(main_df)
-
     devol = emprestimo.get_devolucao(main_df)
-    devol = devol.loc[(devol['corretora']!='BTG PACTUAL CTVM S/A') &  (devol['taxa']!=0.1) ] 
+
+
+    devol = devol.loc[(devol['corretora']!='BTG PACTUAL CTVM S/A') &  (devol['taxa']!=0.1)].drop_duplicates()
+    
+    devol = devol[(devol['reversivel']=='TD')]
     
     custodia = get_df_custodia(main_df)
 
-    devol["estimativa"] = devol["taxa"] * devol["preco_init"]
+    custodia = custodia[custodia['custodia_1']>0]
+
+    devol["estimativa"] = devol["taxa"] * devol["preco"]
 
     devol = devol.sort_values(["codigo", "estimativa"], ascending=(True, False))
 
-    # df= df[['codigo','devol_tomador']]
+    ativos_devol = df[df["devol_tomador_of"] != 0]
 
-    ativos_devol = df[df["devol_tomador"] != 0]
-
-    ativos_devol["devol_tomador"] = ativos_devol["devol_tomador"] * (-1)
+    ativos_devol["devol_tomador_of"] = ativos_devol["devol_tomador_of"] * (-1)
 
     ativos_devol = ativos_devol.merge(
-        get_df_custodia(main_df), on="codigo", how="inner"
+        custodia, on=["fundo","codigo"], how="inner"
     )
 
-    devol = devol.merge(ativos_devol, on="codigo", how="inner")
+    devol = devol.merge(ativos_devol, on=["fundo","codigo"], how="inner")
 
-    devol["devol_tomador"] = devol["to_lend Dia agg"]
+    
+
+    devol["devol_tomador"] = devol.apply(lambda row: min(min(row["custodia_0"],row["devol_tomador_of"]),row['custodia_1']),axis=1)
     #
 
-
+    
     devol["fim"] = 0
 
     for i in range(len(devol.index)):
@@ -75,14 +90,14 @@ def fill_devol(main_df: pd.DataFrame):
     devol = devol[devol["fim"] != 0]
     devol = devol[
         [
-            "registro",
+            "data",
             "fundo",
             "corretora",
             "tipo",
             "vencimento",
             "taxa",
-            "preco_init",
-            "reversor",
+            "preco",
+            "reversivel",
             "codigo",
             "contrato",
             "quantidade",
@@ -92,13 +107,13 @@ def fill_devol(main_df: pd.DataFrame):
 
     devol.rename(
         columns={
-            "registro": "Data",
+            "data": "Data",
             "corretora": "Corretora",
             "tipo": "Tipo",
             "vencimento": "Vencimento",
             "taxa": "Taxa",
             "preco_init": "Preço",
-            "reversor": "Reversivel",
+            "reversivel": "Reversivel",
             "codigo": "Papel",
             "contrato": "Codigo",
             "quantidade": "Saldo",
@@ -107,7 +122,7 @@ def fill_devol(main_df: pd.DataFrame):
         },
         inplace=True,
     )
-
+    devol = devol.drop_duplicates()
     devol.to_excel("G:\Trading\K11\Aluguel\Arquivos\Devolução\devolucao.xlsx")
 
     return devol
@@ -224,6 +239,23 @@ def get_df_devol_final(devol):  ## df -> main
     return devol
 
 
+
+
+
 if __name__ == '__main__':
 
-    df=fill_devol(main())
+    # df=fill_devol(pd.read_excel(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx'))
+    mapa = pd.read_excel(r'C:\Users\joao.ramalho\Documents\GitHub\BTC\Aluguel\mapa_v2.xlsx')
+    aux_dict =  { "position":sum,
+        "to_lend Dia agg":sum,
+        'to_borrow_1':sum,
+        'custodia_0':sum,
+        'custodia_1':sum,
+        'devol_tomador_of':sum}
+
+    
+         
+    
+
+    df=fill_devol(mapa.groupby(["fundo","codigo"]).agg(aux_dict).reset_index())
+

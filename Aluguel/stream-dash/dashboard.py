@@ -14,7 +14,7 @@ import plotly.express as px
 import psycopg2
 import requests
 import base64
-import mapa
+import mapa_v2 as mapa
 from pathlib import Path
 import plotly.graph_objects as go
 import DB
@@ -125,11 +125,25 @@ options = st.sidebar.selectbox(
     "Which Dashboard?",
     {"Rotina", "Mapa", "Taxa", "Boletador", "Taxa-Subsidio", "Ibovespa", "BBI","Simulação"},
 )
-fundos={'KAPITALO KAPPA MASTER FIM','KAPITALO K10 PREV MASTER FIM','KAPITALO KAPPA PREV MASTER FIM'}
+fundos={'KAPITALO K10 PREV MASTER FIM',
+'KAPITALO KAPPA MASTER FIM',
+'KAPITALO KAPPA PREV MASTER FIM',
+'KAPITALO OMEGA PREV MASTER FIM',
+'KAPITALO SIGMA LLC',
+'KAPITALO ZETA MASTER FIA',
+'KAPITALO ZETA MASTER FIM'
+}
 
+estrategias = {'Bolsa 2',
+'CashCarry',
+'Arbitragem Aluguel',
+'MM',
+'Box_3pontas',
+'CashCarry5',
+}
 control = 0
 # st.header(options)
-
+dt = datetime.date.today()
 if options == "Mapa":
     select_fund = st.sidebar.selectbox(
         "Fundo",
@@ -137,21 +151,34 @@ if options == "Mapa":
     )
     st.write("## Mapa")
 
-    if datetime.datetime.fromtimestamp(os.path.getmtime(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')).date() == datetime.date.today():
-        main_df = pd.read_excel(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')
-    else:
-        main_df = mapa.main()
+    # if datetime.datetime.fromtimestamp(os.path.getmtime(r'G:\Trading\K11\Aluguel\Arquivos\Main\main_v2.xlsx')).date() == datetime.date.today():
+    main_df = pd.read_excel(r'G:\Trading\K11\Aluguel\Arquivos\Main\main_v2.xlsx')
+    # else:
+    #     main_df = mapa.main()
 
 
     if st.sidebar.button("Update Database"):
         dt = datetime.date.today()
         dt_1 = workdays.workday(dt, -1, holidays_b3)
-        main_df = mapa.main()
+        main_df =  pd.read_excel(r'G:\Trading\K11\Aluguel\Arquivos\Main\main_v2.xlsx')
         devol = fill_devol(main_df)
          
         
 
-    gb = GridOptionsBuilder.from_dataframe(main_df)
+    main_df = main_df.rename(columns={
+        dt:dt.strftime('%Y-%m-%d'),
+        workdays.workday(dt, 1, holidays_b3):  workdays.workday(dt, 1, holidays_b3).strftime('%Y-%m-%d'),
+        workdays.workday(dt, 2, holidays_b3):  workdays.workday(dt, 2, holidays_b3).strftime('%Y-%m-%d'),
+        workdays.workday(dt, 3, holidays_b3):  workdays.workday(dt, 3, holidays_b3).strftime('%Y-%m-%d'),
+        workdays.workday(dt, 4, holidays_b3): workdays.workday(dt, 4, holidays_b3).strftime('%Y-%m-%d'),
+        workdays.workday(dt, 5, holidays_b3):  workdays.workday(dt, 5, holidays_b3).strftime('%Y-%m-%d')
+    })
+
+    gb = GridOptionsBuilder.from_dataframe(main_df.drop('Unnamed: 0',axis=1))
+
+
+    
+
     gb.configure_default_column(
         groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True
     )
@@ -186,31 +213,36 @@ if options == "Taxa":
     # ticker = st.sidebar.text_input("Ticker", value="BOVA11", max_chars=6).upper()
     days = st.sidebar.number_input("Days", value=21, step=1, format="%i")
     df = DB.get_taxas(days=days,ticker_name=ticker)
+    
+    df = df[['rptdt','tckrsymb','takravrgrate','qtyshrday']]
+    df = df.drop_duplicates().reset_index()
     tx_df = df.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
     vol= df.pivot(index="rptdt", columns="tckrsymb", values="qtyshrday")
     vol=vol.rename(columns={ticker:"VOLUME"})
 
     # ano = workdays.workday(datetime.date.today(), -252, workdays.load_holidays("B3"))
 
-    aux = DB.get_taxas(days=252, ticker_name=ticker,end=None)
+    aux = DB.get_taxas(days=252, ticker_name=ticker).drop_duplicates()
+    aux = aux[['rptdt','tckrsymb','takravrgrate','qtyshrday']]
+    aux = aux.drop_duplicates()
+    # aux.to_excel('aux_2.xlsx')
     aux = aux.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
+
     aux=aux.sort_values(by="rptdt",ascending= False)
-    media_ano = round(aux[ticker].sum() / 252, 2)
+    aux[ticker] = aux[ticker].astype(float)
+    media_ano = round(sum(aux[ticker].tolist()) / 252, 2)
     aux_0 = aux.iloc[0:125]
-    media_sem = round((aux_0[ticker].sum()) / 126, 2)
-    media_21 = round((aux.iloc[0:21][ticker].sum()) / 21, 2)
-    media_10 = round((aux.iloc[0:10][ticker].sum()) / 10, 2)
-    # print(media_atual)
-    # print(media_ano)
-    # print(media_sem)
-    
+    media_sem = round(sum(aux_0[ticker].tolist()) / 126, 2)
+    media_21 = round(sum(aux.iloc[0:21][ticker].tolist()) / 21, 2)
+    media_10 = round(sum(aux.iloc[0:10][ticker].tolist()) / 10, 2)
+
     col1, col2, col3, col4, col5 = st.columns(5)
     col1.metric("Media Anual", f"{media_ano}%")
     col2.metric("Media Semestral", f"{media_sem}%")
     col3.metric("Media 21 dias", f"{media_21}%")
     col4.metric("Media 10 dias", f"{media_10}%")
     
-    col5.metric("Taxa atual", f"{tx_df.loc[data.get_dt_1(None),ticker]}%")
+    col5.metric("Taxa atual", f"{tx_df.loc[data.get_dt_1(None).strftime('%Y-%m-%d'),ticker]}%")
 
 
     # plot = plotly_plot("Line", tx_df, y=ticker)
@@ -231,7 +263,7 @@ if options == "Taxa":
     url = f"https://arquivos.b3.com.br/apinegocios/tickerbtb/{ticker}/{data.get_dt().strftime('%Y-%m-%d')}"
     response = requests.get(url)
     operations = response.json()
-    df=pd.DataFrame(operations['values'],columns=['ticker','qtd','rate','id','type','dt','hour'])
+    df=pd.DataFrame(operations['values'],columns=['ticker','qtd','rate','id','type','dt','hour','aux0','aux1'])
     df=df[df['type']==91]
     avg_real=round((df['qtd']*(1+df['rate'])).sum()/df['qtd'].sum()-1,3)
 
@@ -246,9 +278,8 @@ if options == "Taxa":
 
 if options == "Rotina":
    
-    if datetime.datetime.fromtimestamp(os.path.getmtime(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')).date() == datetime.date.today():
-        
-        main_df = pd.read_excel(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')
+    if datetime.datetime.fromtimestamp(os.path.getmtime(r'G:\Trading\K11\Aluguel\Arquivos\Main\main_v2.xlsx')).date() == datetime.date.today():
+        main_df = pd.read_excel(r'G:\Trading\K11\Aluguel\Arquivos\Main\main_v2.xlsx')
         df_renovacao = DB.get_renovacoes()
     else:
         main_df = mapa.main()
@@ -270,14 +301,16 @@ if options == "Rotina":
 
 
 
-    borrow_janela = mapa.get_borrow_janela(main_df).rename(columns={"to_borrow_0": "Quantidade"}).set_index('fundo')
+    borrow_janela = pd.read_excel("G:\Trading\K11\Aluguel\Arquivos\Tomar\Janela\\"
+        + "K11_borrow_complete_"
+        + dt.strftime("%d-%m-%Y")
+        + ".xlsx").rename(columns={"to_borrow_0": "Quantidade"}).set_index('fundo')
     
-
+    borrow_janela = borrow_janela.drop('Unnamed: 0',axis=1)
     if borrow_janela.empty:
         st.write("Não há ativos para tomar na janela")
     else:
         st.table(borrow_janela)
-   
         copy_button_janela = Button(label="Copy Table")
         copy_button_janela.js_on_event(
                 "button_click",
@@ -304,41 +337,16 @@ if options == "Rotina":
 
 
     st.write("## Tomar para o dia ")
-
-    borrow_dia = mapa.get_borrow_dia(main_df)
-    
-    query="select * from aluguel_sub"
-    db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
-    borrow_sub=pd.read_sql(query, db_conn_k11)
-    db_conn_k11.close()
-
+    borrow_dia = pd.read_excel(
+    "G:\Trading\K11\Aluguel\Arquivos\Tomar\Dia\\"
+    + "K11_borrow_complete_"
+    + dt.strftime("%d-%m-%Y")
+    + ".xlsx")
+    borrow_dia = borrow_dia.drop('Unnamed: 0',axis=1)
     if borrow_dia.empty:
         st.write("Não há ativos para tomar para o dia")
     else:
-        if not borrow_sub.empty:
-
-            st.write("Ativos subsidiados disponiveis")
-            st.dataframe(borrow_sub.set_index("str_corretora"))
-            copy_button = Button(label="Copy Table")
-            copy_button.js_on_event(
-                "button_click",
-                CustomJS(
-                    args=dict(df=borrow_sub.set_index("str_corretora").to_csv(sep="\t")),
-                    code="""
-            navigator.clipboard.writeText(df);
-            """,
-                ),
-            )
-            no_event_sub = streamlit_bokeh_events(
-                copy_button,
-                events="GET_TEXT",
-                key="get_text",
-                refresh_on_update=True,
-                override_height=75,
-                debounce_time=0,
-            )
-
-        borrow_dia = borrow_dia.set_index("codigo")
+        borrow_dia = borrow_dia.set_index("fundo")
         borrow_dia = borrow_dia.rename(columns={"to_borrow_1": "Quantidade"})
         st.table(borrow_dia)
         copy_button_dia = Button(label="Copy Table")
@@ -372,31 +380,14 @@ if options == "Rotina":
     st.write("## Saldo doador ")
     
 
-    
-    agg=st.checkbox("Agressivo")
+    saldo_lend = pd.read_excel("G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\\"
+        + "K11_lend_complete_"
+        + dt.strftime("%d-%m-%Y")
+        + ".xlsx")
 
-    if agg:
-        saldo_lend = pd.read_excel(f"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\Agg\K11_lend_agg_{datetime.datetime.today().strftime('%d-%m-%Y')}.xlsx")
-    else:
-        saldo_lend = pd.read_excel(f"G:\Trading\K11\Aluguel\Arquivos\Doar\Saldo-Dia\K11_lend_{datetime.datetime.today().strftime('%d-%m-%Y')}.xlsx")
 
     saldo_lend = saldo_lend.drop(columns={'Unnamed: 0'}).rename(columns={"codigo": "Codigo", "to_lend": "Saldo"})
     saldo_lend = saldo_lend.rename(columns={"codigo": "Codigo", "to_lend Dia agg": "Saldo"})
-
-    check = st.sidebar.button('Check Disponibilidade')
-    if check:
-        saldo = data.saldo_btc().rename(columns={'cod_ativo':"Codigo"})
-
-        aux = saldo_lend.merge(saldo,on='Codigo',how='left')
-        aux['stress']=aux['Disponibilidade'] - aux['Saldo']
-
-        if aux[aux['stress']<0].empty:
-            st.warning("Disponibilidade Adequada")
-        else:
-            st.warning("Alerta de Disponibilidade")
-
-
-
 
   
     if saldo_lend.empty:
@@ -441,7 +432,7 @@ if options == "Rotina":
             if len(select_broker) != 0:
                 aux_df = round(saldo_lend["Saldo"] / len(select_broker), 0)
                 for x in select_broker:
-                    send_email_lend(df=aux_df.to_frame(), broker=str(x))
+                    send_email_lend(df=aux_df.to_frame(), broker=x)
             else:
                 send_email_lend(df=saldo_lend, broker=select_broker)
             # st.dataframe(aux_df)
@@ -594,8 +585,13 @@ if options == "Boletador":
 
     corretora = st.sidebar.selectbox("Corretora?", brokers)
     email  = st.sidebar.selectbox("Email?",{True,False})
+    
     if corretora == "Bofa":
         tipo = st.sidebar.selectbox("Tipo?", {"borrow", "loan"})
+        if st.sidebar.button("Boletar"):
+            st.write(boleta_main(broker=corretora, type=tipo,get_email = email))
+    if corretora =="Bradesco":
+        tipo = st.sidebar.selectbox("Tipo?", {"janela", "dia"})
         if st.sidebar.button("Boletar"):
             st.write(boleta_main(broker=corretora, type=tipo,get_email = email))
     else:
@@ -635,47 +631,9 @@ if options == "Boletador":
     )
 
 
-if options == "Taxa-Subsidio":
-    st.write(options)
-    broker = st.sidebar.selectbox("Broker", brokers)
-    if broker =='BTG':
-        broker='BTG Pactual'
-    ticker = st.sidebar.text_input("Codigo")
-    quant = st.sidebar.number_input("Quantidade", step=1, format="%i")
-    taxa = st.sidebar.number_input("Taxa (a,a)%", format="%.2f")
-    vencimento = st.sidebar.date_input("Vencimento", datetime.datetime(2022, 1, 1))
-    query="select * from aluguel_sub"
-    db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
-    borrow_sub=pd.read_sql(query, db_conn_k11)
-    db_conn_k11.close()
-    # borrow_sub = pd.read_excel(table_subsidio, index_col=0)
-
-    # borrow_sub=trading_sub.del_sub(df=borrow_sub,df_boletas=data.boletas_dia)
-    # borrow_sub = borrow_sub.dropna(how="all", axis=0)
-
-
-    if st.sidebar.button("Registrar"):
-
-        # aux_sub.append({'str_corretora':broker,'dbl_taxa':taxa,'str_codigo':ticker,'dbl_quantidade':quant,'dte_vencimento':vencimento,'dte_data':data.get_dt().strftime("%d/%m/%Y") }, ignore_index=True)
-
-        # # aux_sub.loc[:,"dte_data"] = data.get_dt().strftime("%d/%m/%Y")   
-        # # aux_sub.loc[:, "str_corretora"] = broker
-        # # aux_sub.loc[:, "dbl_taxa"] = taxa
-        # # aux_sub.loc[:, "str_codigo"] = ticker
-        # # aux_sub.loc[:, "dbl_quantidade"] = quant
-        # # aux_sub.loc[:, "dte_vencimento"] = vencimento.strftime("%d/%m/%Y")
-
-        query_up = """INSERT INTO aluguel_sub(str_corretora,dbl_taxa,str_codigo,dbl_quantidade,dte_vencimento,dte_data) VALUES ('%s','%s','%s','%s','%s','%s')""" % (
-            str(broker), taxa, str(ticker).upper(), quant, vencimento, data.get_dt().strftime("%d/%m/%Y"),
-        )
-        DB.single_insert(db_conn_k11, query_up)
 
 
 
-    if not borrow_sub.empty:
-        st.dataframe(borrow_sub)
-    else:
-        st.write("Nenhum registro encontrado")
 
 if options == "Ibovespa":
 
@@ -688,22 +646,27 @@ if options == "Ibovespa":
     # start = workdays.workday(datetime.date.today(), -3, workdays.load_holidays("B3"))
     aux = DB.get_taxas(days=3, ticker_name="BOVA11")
     aux = aux.pivot(index="rptdt", columns="tckrsymb", values="takravrgrate")
-
+    
     col1, col2, col3,col4 = st.columns(4)
     col1.metric("Taxa Cateira", f"{data.ibov.loc[0,'Aluguel Carteira']}%")
-    col2.metric("Taxa BOVA11", f"{aux.loc[data.get_dt_1(),'BOVA11']}%")
+    col2.metric("Taxa BOVA11", f"{aux.loc[data.get_dt_1().strftime('%Y-%m-%d'),'BOVA11']}%")
 
-    map_aux = data.main(select_fund)
-    map_aux = map_aux[map_aux['fundo']==select_fund]
-    map_aux = map_aux[["codigo", "taxa_doado","taxa_tomado"]].rename(columns={"codigo": "cod"})
+    map_aux = pd.read_excel(r'G:\Trading\K11\Aluguel\Arquivos\Main\main_v2.xlsx')
     
-    ibov = pd.merge(data.ibov, map_aux, on="cod", how="left")
+    map_aux = map_aux.loc[(map_aux['fundo']==select_fund) & (map_aux['str_estrategia']=='CashCarry')]
+    map_aux = map_aux[["codigo", "TAXA DOADORA","TAXA TOMADORA"]].rename(columns={"codigo": "cod"})
+    
+    ibov = pd.merge(map_aux,data.ibov,on="cod", how="left")
     
     
-    ibov["Analise Peso x Taxa Doado"] = ibov["taxa_doado"] * ibov["part"]
+    ibov["Analise Peso x Taxa Doado"] = ibov["TAXA DOADORA"] * ibov["part"]
     # ibov["Analise Peso x Taxa Doado"] = ibov.apply(lambda row: row["taxa_doado"] * row["part"],axis=1)
-    ibov["Analise Peso x Taxa Tomado"] = ibov["taxa_tomado"] * ibov["part"]
+    ibov["Analise Peso x Taxa Tomado"] = ibov["TAXA TOMADORA"] * ibov["part"]
 
+    
+    
+        
+    
     ibov["Analise Peso x Taxa Doado"] = ibov[
         "Analise Peso x Taxa Doado"
     ].round(2)
@@ -712,13 +675,15 @@ if options == "Ibovespa":
         "Analise Peso x Taxa Tomado"
     ].round(2)
 
+    
     ibov.loc[0, "Aluguel Carteira Kappa Doada"] = round(
-        sum(ibov["Analise Peso x Taxa Doado"].tolist()) / 100, 2
+        ibov["Analise Peso x Taxa Doado"].sum() / 100, 2
     )
 
     ibov.loc[0, "Aluguel Carteira Kappa Tomada"] = round(
-        sum(ibov["Analise Peso x Taxa Tomado"].tolist()) / 100, 2
+        ibov["Analise Peso x Taxa Tomado"].sum() / 100, 2
     )
+
 
     ibov["percentual kappa"] = (
         ibov["Analise Peso x Taxa Doado"]
@@ -731,13 +696,15 @@ if options == "Ibovespa":
     )
 
 
-
     ibov["percentual kappa"] = ibov["percentual kappa"].round(2)
     ibov["percentual kappa tomado"] = ibov["percentual kappa tomado"].round(2)
+    
+    
+    
+    
+    col3.metric("Taxa Carteira Doada", f"{ibov.loc[0,'Aluguel Carteira Kappa Doada']}%")
 
-    col3.metric("Taxa Carteira Kappa Doada", f"{ibov.loc[0,'Aluguel Carteira Kappa Doada']}%")
-
-    col4.metric("Taxa Carteira Kappa Tomada", f"{ibov.loc[0,'Aluguel Carteira Kappa Tomada']}%")
+    col4.metric("Taxa Carteira Tomada", f"{ibov.loc[0,'Aluguel Carteira Kappa Tomada']}%")
     ibov=ibov.fillna(0)
     gb = GridOptionsBuilder.from_dataframe(
         ibov[
@@ -746,8 +713,8 @@ if options == "Ibovespa":
                 "taxa",
                 "part",
                 "Analise Peso x Taxa",
-                "taxa_doado",
-                "taxa_tomado",
+                "TAXA TOMADORA",
+                "TAXA DOADORA",
                 "Analise Peso x Taxa Doado",
                 "Analise Peso x Taxa Tomado"
             ]
@@ -775,8 +742,8 @@ if options == "Ibovespa":
                 "taxa",
                 "part",
                 "Analise Peso x Taxa",
-                "taxa_doado",
-                "taxa_tomado",
+                "TAXA TOMADORA",
+                "TAXA DOADORA",
                 "Analise Peso x Taxa Doado",
                 "Analise Peso x Taxa Tomado"
             ]
@@ -798,8 +765,6 @@ if options == "Ibovespa":
 
     # col1_p, col2_p = st.columns(2)
     if select=="Carteira Ibovespa":
-        
-
         fig = px.pie(
             ibov,
             values="percentual",
@@ -829,7 +794,9 @@ if options == "Ibovespa":
         )
         fig_kap_t.update_traces(textposition="inside", textinfo="percent+label")
         st.plotly_chart(fig_kap_t)
-    ops=main_df["codigo"].tolist()
+    
+    ops=map_aux["cod"].tolist()
+    ops =  [x.upper() for x in ops]
     
     ops.insert(0,"IBOV")
     stocks = st.multiselect(
@@ -838,8 +805,8 @@ if options == "Ibovespa":
 
     ibov_rate=data.get_ibov_rate()
     if stocks!=['IBOV']:
-        aux_s=stocks.remove('IBOV')
-        ibov_rate=ibov_rate.merge(data.get_risk_taxes(aux_s),on='dte_data')
+        ibov_rate=ibov_rate.merge(data.get_risk_taxes(stocks),on='dte_data')
+        print(ibov_rate)
     else:
          ibov_rate=data.get_ibov_rate()
          
@@ -848,125 +815,23 @@ if options == "Ibovespa":
     st.plotly_chart(fig, use_container_width=True)
 
 
-if options == "BBI":
-
-    st.write("## Smart BBi")
-
-    st.write("## Trades ativos")
-    if st.sidebar.button("Update BBI"):
-        global trades_bbi
-        trades_bbi = get_bbi.importa_trades_bbi()
-        renov_bbi = get_bbi.importa_renovacoes_aluguel_bbi()
-    if trades_bbi.empty:
-        st.write("Não há boletas ativas disponíveis ")
-    else:
-        gb = GridOptionsBuilder.from_dataframe(trades_bbi)
-        gb.configure_default_column(
-            groupable=True,
-            value=True,
-            enableRowGroup=True,
-            aggFunc="sum",
-            editable=True,
-        )
-
-        gb.configure_grid_options(domLayout="normal")
-        gb.configure_selection(
-            selection_mode="multiple",
-            use_checkbox=True,
-        )
-        gridOptions = gb.build()
-
-        gb.configure_side_bar()
-        gb.configure_default_column(
-            groupable=True,
-            value=True,
-            enableRowGroup=True,
-            aggFunc="sum",
-            editable=True,
-        )
-        grid_response = AgGrid(
-            trades_bbi,
-            gridOptions=gridOptions,
-            height=300,
-            width="50%",
-            fit_columns_on_grid_load=True,
-            allow_unsafe_jscode=True,  # Set it to True to allow jsfunction to be injected
-            enable_enterprise_modules=True,
-            theme="blue",
-            update_mode=GridUpdateMode.SELECTION_CHANGED,
-        )
-
-    st.write("## Renovações ativas")
-    
-    if renov_bbi().empty:
-        st.write("Não há boletas ativas disponíveis ")
-    else:
-        gb = GridOptionsBuilder.from_dataframe(renov_bbi())
-        gb.configure_default_column(
-            groupable=True,
-            value=True,
-            enableRowGroup=True,
-            aggFunc="sum",
-            editable=True,
-        )
-
-        gb.configure_grid_options(domLayout="normal")
-        gb.configure_selection(
-            selection_mode="multiple",
-            use_checkbox=True,
-        )
-        gridOptions = gb.build()
-
-        gb.configure_side_bar()
-        gb.configure_default_column(
-            groupable=True,
-            value=True,
-            enableRowGroup=True,
-            aggFunc="sum",
-            editable=True,
-        )
-        grid_response = AgGrid(
-            renov_bbi(),
-            gridOptions=gridOptions,
-            height=300,
-            width="50%",
-            fit_columns_on_grid_load=True,
-            allow_unsafe_jscode=True,  # Set it to True to allow jsfunction to be injected
-            enable_enterprise_modules=True,
-            theme="blue",
-            update_mode=GridUpdateMode.SELECTION_CHANGED,
-        )
-
-db_conn_risk = psycopg2.connect(
-host=config.DB_RISK_HOST,
-dbname=config.DB_RISK_NAME,
-user=config.DB_RISK_USER,
-password=config.DB_RISK_PASS,
-)
 
 
-query=f"select rptdt, tckrsymb,stockprtcptnpct as part from b3up2data.index_portfoliocompositionfile_ibov WHERE  rptdt>'{workdays.workday(datetime.date.today(), -21, holidays_b3)}'"
-
-
-query_r=f"select rptdt, tckrsymb,takravrgrate from b3up2data.equities_assetloanfilev2 where mktnm='Balcao'  and rptdt>'{workdays.workday(datetime.date.today(), -21, holidays_b3)}'"
-
-
-ibov=pd.read_sql(query,db_conn_risk)
-
-rates=pd.read_sql(query_r,db_conn_risk)
+ibov=DB.get_ibov(21)
+rates=DB.get_taxas(21)
 df=ibov.merge(rates,on=['rptdt','tckrsymb'])
-df['media']= df['part']*df['takravrgrate']/100
+df['stockprtcptnpct'] = df['stockprtcptnpct'].astype(float)
+df['takravrgrate'] = df['takravrgrate'].astype(float)
+df['media']= df['stockprtcptnpct']*df['takravrgrate']/100
 df=df[['rptdt','media']].groupby('rptdt').sum().reset_index()
 df['media']=round(df['media'],2)
-query_bova=f"select rptdt,takravrgrate as BOVA11 from b3up2data.equities_assetloanfilev2 where mktnm='Balcao' and tckrsymb='BOVA11'  and rptdt>'{workdays.workday(datetime.date.today(), -21, holidays_b3)}'"
-
-bova=pd.read_sql(query_bova,db_conn_risk)
+bova=DB.get_taxas(21,'BOVA11')
+bova['takravrgrate'] = bova['takravrgrate'].astype(float)
+bova = bova.rename(columns={'takravrgrate':'BOVA11'})
 pair=df.merge(bova,on='rptdt')
-db_conn_risk.close()
-
-
+pair = pair[['rptdt','media','BOVA11']]
 fig = px.line(pair.set_index('rptdt'))
-# fig.update_layout(title_x='',title_y='')
+
 st.sidebar.plotly_chart(fig, use_container_width=True)
 
 

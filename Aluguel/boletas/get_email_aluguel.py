@@ -39,6 +39,17 @@ def get_email_xp():
         str_search='(X-GM-RAW "k11@kapitalo.com.br BTC - XP has:attachment newer_than:8h")',
         
     )
+def get_email_liquidez():
+    email_gmail.get_mail_files(
+        ["Marylia.Ponce@bgcpartners.com","Fabiano.Bonizzoni@bgcpartners.com"],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Liquidez//",
+        [".xls", ".xlsm", ".xlsx"],
+        "AluguelLiquidez",
+        str_search='(X-GM-RAW " BTC Liquidez has:attachment newer_than:8h")',
+        
+    )
+
 
 
 def get_email_bofa():
@@ -96,8 +107,8 @@ def get_email_orama():
         ["igor.neves@orama.com.br"],
         "",
         "G://Trading//K11//Aluguel//Trades//Orama//",
-        [".xls", ".xlsm", ".xlsx"],
-        "AluguelOrama",
+        extensions=[".xls", ".xlsm", ".xlsx"],type='trade',
+        filename2save="AluguelOrama",
         att_newer_than=8,
     )
 
@@ -145,39 +156,57 @@ def get_email_btg():
         "G://Trading//K11//Aluguel//Trades//BTG//",
         [".xlsx"],
         "AluguelBTG",
-        str_search='(X-GM-RAW "@btgpactual.com KAPITALO KAPPA has:attachment newer_than:8h")',
+        str_search='(X-GM-RAW "@btgpactual.com Confirmacao BTG Pactual - KAPITALO K11 has:attachment newer_than:8h")',
     )
-
+def get_email_stone():
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Stone//",
+        [".xlsx"],
+        "AluguelStone",
+        str_search='(X-GM-RAW "@stonex.com BTC STONEX has:attachment newer_than:8h")',
+    )
 
 def get_email_terra():
     email_gmail.get_mail_files(
         [],
         "",
         "G://Trading//K11//Aluguel//Trades//Terra//",
-        [".xlsx"],
-        "AluguelTerra",
+        extensions=[".xlsx"],type='trade',
+        filename2save="AluguelTerra",
         str_search='(X-GM-RAW "@terrainvestimentos.com BTC has:attachment newer_than:8h")',
     )
 
 
-def get_email_bradesco():
+def get_email_dia_bradesco(type):
+    print(type)
     email_gmail.get_mail_files(
         [],
         "",
         "G://Trading//K11//Aluguel//Trades//Bradesco//",
-        [".xlsx"],
-        "AluguelBradesco",
-        str_search='(X-GM-RAW "@bradescobbi.com.br KAPITALO - KAPPA has:attachment newer_than:8h")',
+        extensions=[".xlsx"],type=type,
+        filename2save="AluguelBradesco",
+        str_search='(X-GM-RAW "lucas.pizarro@bradescobbi.com.br ALUGUEL DIA KAPITALO JOAO has:attachment newer_than:8h")',
     )
+def get_email_janela_bradesco(type):
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Bradesco//",
+        extensions = [".xlsx"],type=type,
+        filename2save = "AluguelBradesco",
+        str_search='(X-GM-RAW "lucas.pizarro@bradescobbi.com.br ALUGUEL JANELA KAPITALO JOAO  has:attachment newer_than:8h")')
+    
 
 
 def get_email_santander():
     email_gmail.get_mail_files(
-        ["vhanassaka@santander.com.br"],
+        ["relatorios@santander.com.br"],
         "",
         "G://Trading//K11//Aluguel//Trades//Santander//",
-        [".xls", ".xlsm", ".xlsx"],
-        "AluguelSantander",
+        extensions = [".xls", ".xlsm", ".xlsx"],type = 'trade',
+        filename2save = "AluguelSantander",
         att_newer_than=8,
     )
 
@@ -187,7 +216,7 @@ def get_email_cm():
         "stephany.deluca@cmcapital.com.br"],
         "",
         "G://Trading//K11//Aluguel//Trades//CM//",
-        [".xls", ".xlsm", ".xlsx"],
+        [".xls", ".xlsm", ".xlsx"],'trade'
         "AluguelCM",
         att_newer_than=8,
     )
@@ -203,14 +232,14 @@ def get_email_modal():
 )
 
 def get_email_safra():
-#     email_gmail.get_mail_files(
-#         [""],
-#         "",
-#         "G://Trading//K11//Aluguel//Trades//Modal//",
-#         [".xls", ".xlsm", ".xlsx"],
-#         "AluguelSafra",
-#         att_newer_than=8,
-# )
+    email_gmail.get_mail_files(
+        ["william.parada@safra.com.br"],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Safra//",
+        [".xls", ".xlsm", ".xlsx"],'trade'
+        "AluguelSafra",
+        att_newer_than=8,
+)
     return
 
 def get_email_all():

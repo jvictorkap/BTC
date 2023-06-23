@@ -26,10 +26,10 @@ def parse_excel_terra(file_path):
 
     df.fillna(0, inplace=True)
     df = df[df["str_papel"] != 0]
-    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
+    
     df["str_corretora"] = "Terra"
     df["str_tipo_registro"] = df["Modalidade"].apply(
-        lambda x: "R" if x == "Balcao" else "N" if x == "D1" else None
+        lambda x: "R" if x == "Balcao" else "N" if x == "Eletronico" else None
     )
     df["str_modalidade"] = df["str_tipo_registro"].apply(
         lambda x: "E1" if x == "N" else None
@@ -37,7 +37,7 @@ def parse_excel_terra(file_path):
     df["str_tipo_comissao"] = "A"
     df["dbl_valor_fixo_comissao"] = 0
     df["str_reversivel"] = "TD"
-    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
+    
     df["str_status"] = "Emprestimo"
     df["str_tipo"] = "D"
     df["dbl_quantidade"] = df["dbl_quantidade"].apply(lambda x: x * (-1))

@@ -19,6 +19,7 @@ import os
 import streamlit as st
 from boletas import email_gmail
 pd.options.mode.chained_assignment = None  # default='warn'
+import pyodbc
 # df = mapa.main()
 # devol = fill_devol(df)
 # devol_doador=fill_devol_doador(df)
@@ -71,7 +72,7 @@ def get_dt_1(x=None):
 # def renov_bbi():
 
 #     return get_bbi.importa_renovacoes_aluguel_bbi()
-@st.cache
+
 def main(fundo):
     
     if datetime.datetime.fromtimestamp(os.path.getmtime(r'G:\Trading\K11\Aluguel\Arquivos\Main\main.xlsx')).date() == datetime.date.today():
@@ -79,6 +80,8 @@ def main(fundo):
     else:
         df = mapa.main()
 
+    if fundo != None:
+        df = df[df['fundo']==fundo]
 
 
     # devol = fill_devol(df)
@@ -113,7 +116,7 @@ def main(fundo):
     # dt_next_5 = workdays.workday(dt, 5, holidays_b3)
     # vcto_5 = "venc " + dt_next_5.strftime("%d/%m/%Y")
     return df
-@st.cache
+
 def update_sub(fundo):
     queryf="select * from aluguel_sub"
     db_conn_k11 = psycopg2.connect(host=config.DB_K11_HOST, dbname=config.DB_K11_NAME , user=config.DB_K11_USER, password=config.DB_K11_PASS)
@@ -147,11 +150,31 @@ def get_ibov_rate():
 
 @st.cache
 def get_risk_taxes(stocks):
-    query="select rptdt as dte_data,takravrgrate,tckrsymb from b3up2data.equities_assetloanfilev2 where mktnm='Balcao'"
-    db_conn_risk = psycopg2.connect(host=config.DB_RISK_HOST, dbname=config.DB_RISK_NAME , user=config.DB_RISK_USER, password=config.DB_RISK_PASS)
-    df=pd.read_sql(query, db_conn_risk)
-    df = df.pivot(index="dte_data", columns="tckrsymb", values="takravrgrate")
-    df=df[stocks].reset_index()
+    print(stocks)
+    stocks.remove('IBOV')
+    end = datetime.date.today()
+    start = '2020-10-26'
+        
+    CORPORATE_DSN_CONNECTION_STRING = "DSN=Kapitalo_Corp"
+
+    aux = '"MktNm":"Balcao"'
+    connection = pyodbc.connect(CORPORATE_DSN_CONNECTION_STRING)
+
+    df = pd.read_sql(f" CALL up2data.XSP_UP2DATA_DEFAULT_PERIODO('{start}','{end.strftime('%Y-%m-%d')}', 'Equities_AssetLoanFileV2', '{aux}' )",connection)
+    df.columns = [x.lower() for x in df.columns]
+
+    df =df[df['mktnm']=='Balcao']
+    df = df.rename(columns={'rptdt':'dte_data'})
+   
+    
+    df = df[df['tckrsymb'].isin(stocks)]
+    
+    df = df[['dte_data','tckrsymb','takravrgrate']]
+    df['dte_data'] = df['dte_data'].apply(lambda x: datetime.datetime.strptime(x,'%Y-%m-%d').date())
+    df['takravrgrate'] = df['takravrgrate'].astype(float)
+    
+    df = pd.pivot_table(df,index='dte_data',columns='tckrsymb',values='takravrgrate',aggfunc = 'sum').reset_index().fillna(0)
+    
     return df
 
 # if __name__ =='__main__':

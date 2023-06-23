@@ -15,21 +15,20 @@ def parse_excel_santander(file_path):
     df = pd.read_excel(file_path)
     df.rename(
         columns={
-            "fundo": "str_fundo",
+            "Fundo": "str_fundo",
             "Corretora": "str_corretora",
-            "vencimento": "dte_datavencimento",
-            "ativo": "str_papel",
-            "quantidade": "dbl_quantidade",
-            "taxa": "dbl_taxa",
+            "Vencimento": "dte_datavencimento",
+            "Ativo": "str_papel",
+            "Quantidade": "dbl_quantidade",
+            "Taxa": "dbl_taxa",
         },
         inplace=True,
     )
 
     df.fillna(0, inplace=True)
     df = df[df["str_papel"] != 0]
-    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
     df["str_corretora"] = "Santander"
-    df["str_tipo_registro"] = df["modalidade"].apply(
+    df["str_tipo_registro"] = df["Modalidade"].apply(
         lambda x: "R" if x == "BALCAO" else "N" if x == "D1" else None
     )
     df["str_modalidade"] = df["str_tipo_registro"].apply(
@@ -38,9 +37,9 @@ def parse_excel_santander(file_path):
     df["str_tipo_comissao"] = "A"
     df["dbl_valor_fixo_comissao"] = 0
     df["str_reversivel"] = "TD"
-    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
+    
     df["str_status"] = "Emprestimo"
-    df["str_tipo"] = df["lado"].apply(lambda x: "T" if x == "TOMADOR" else "D")
+    df["str_tipo"] = 'D'
     df["dbl_quantidade"] = df.apply(
         lambda row: row["dbl_quantidade"]
         if row["str_tipo"] == "T"

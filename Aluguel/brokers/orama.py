@@ -20,6 +20,7 @@ def parse_excel_orama(file_path):
             "QUANTIDADE": "dbl_quantidade",
             "VCTO": "dte_datavencimento",
             "TAXA": "taxa",
+            "FUNDO":'str_fundo'
         },
         inplace=True,
     )
@@ -39,7 +40,7 @@ def parse_excel_orama(file_path):
     df["str_tipo_comissao"] = "A"
     df["dbl_valor_fixo_comissao"] = 0
     df["str_reversivel"] = "TD"
-    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
+    # df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
     df["str_status"] = "Emprestimo"
     df["str_tipo"] = "D"
     df["dbl_quantidade"] = df["dbl_quantidade"] * (-1)
@@ -54,15 +55,14 @@ def parse_excel_orama(file_path):
             "dte_datavencimento",
             "dbl_taxa",
             "str_reversivel",
-            "str_papel",
-            "dbl_quantidade",
             "str_tipo_registro",
             "str_modalidade",
             "str_tipo_comissao",
             "dbl_valor_fixo_comissao",
+            "str_papel",
+            "dbl_quantidade",                  
             "str_status",
     ]]
-
 
 
 def parse_excel_renov_orama(file_path):

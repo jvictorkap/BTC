@@ -39,7 +39,9 @@ def carteira_ibov(df=consulta_ibov()):
 
     ibov = ibov[["cod", "part", "theoricalQty"]]
 
-    ibov["taxa"] = list(DB.get_taxa(ticker_name=x, pos=0) for x in ibov["cod"].tolist())
+    ibov = ibov.merge(DB.get_taxasalugueis(None)[['tckrsymb','takravrgrate']].rename(columns={'tckrsymb':'cod','takravrgrate':'taxa'}),on=['cod'],how='inner')
+    ibov['taxa'] = ibov['taxa'].astype(float)
+    # ibov["taxa"] = list(DB.get_taxas(pos=0,) for x in ibov["cod"].tolist())
 
     # ibov['taxa b3'] = list(calculo_b3(taxa=x) for x in ibov['taxa'].tolist())
 

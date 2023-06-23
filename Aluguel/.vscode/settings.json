@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\rafael.poppe\\Anaconda3\\python.exe",
+    "python.pythonPath": "C:\\Python37\\Scripts\\python.exe",
     "python.analysis.extraPaths": [
         "./dash"
     ]

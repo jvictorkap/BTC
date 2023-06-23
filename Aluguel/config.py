@@ -32,8 +32,3 @@ DB_PASS_HOST = "PGKPTL01"
 DB_PASS_NAME = "Passivo"
 DB_PASS_USER = "kapitalo11"
 DB_PASS_PASS = "kapitalo11"
-
-DB_TESTE_HOST = "PGKPTL01"
-DB_TESTE_NAME = "db_Teste"
-DB_TESTE_USER = "kapitalo11"
-DB_TESTE_PASS = "kapitalo11"
