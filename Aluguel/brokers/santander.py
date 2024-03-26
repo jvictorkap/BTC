@@ -21,6 +21,7 @@ def parse_excel_santander(file_path):
             "Ativo": "str_papel",
             "Quantidade": "dbl_quantidade",
             "Taxa": "dbl_taxa",
+            "Lado":'str_tipo'
         },
         inplace=True,
     )
@@ -29,7 +30,7 @@ def parse_excel_santander(file_path):
     df = df[df["str_papel"] != 0]
     df["str_corretora"] = "Santander"
     df["str_tipo_registro"] = df["Modalidade"].apply(
-        lambda x: "R" if x == "BALCAO" else "N" if x == "D1" else None
+        lambda x: "R" if x == "Balcão" else "N" if x == "D1" else None
     )
     df["str_modalidade"] = df["str_tipo_registro"].apply(
         lambda x: "E1" if x == "N" else None
@@ -39,7 +40,7 @@ def parse_excel_santander(file_path):
     df["str_reversivel"] = "TD"
     
     df["str_status"] = "Emprestimo"
-    df["str_tipo"] = 'D'
+    
     df["dbl_quantidade"] = df.apply(
         lambda row: row["dbl_quantidade"]
         if row["str_tipo"] == "T"

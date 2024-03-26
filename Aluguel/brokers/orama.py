@@ -42,8 +42,8 @@ def parse_excel_orama(file_path):
     df["str_reversivel"] = "TD"
     # df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
     df["str_status"] = "Emprestimo"
-    df["str_tipo"] = "D"
-    df["dbl_quantidade"] = df["dbl_quantidade"] * (-1)
+    df["str_tipo"] = "T"
+    df["dbl_quantidade"] = df["dbl_quantidade"]
     df["dte_databoleta"] = date.today().strftime("%Y-%m-%d")
     df["dte_data"] = date.today().strftime("%Y-%m-%d")
     return df[[

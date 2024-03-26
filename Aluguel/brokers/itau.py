@@ -33,7 +33,7 @@ def parse_excel_renov_itau(file_path):
     df["dte_datavencimento"] = df["dte_datavencimento"].apply(
         lambda x: date(1900, 1, 1) + timedelta(days=(x - 2) if type(x) == int else x)
     )
-    df = df[df["str_papel"] != 0]
+    # df = df[df["str_papel"] != 0]
 
     df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
     df["str_modalidade"] = df["Modalidade"].apply(

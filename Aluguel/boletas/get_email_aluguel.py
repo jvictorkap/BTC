@@ -1,3 +1,4 @@
+from distutils.command.build_ext import extension_name_re
 import sys
 
 sys.path.append("..")
@@ -25,17 +26,56 @@ def get_email_ubs():
         [],
         "",
         "G://Trading//K11//Aluguel//Trades//UBS//",
-        [".xls", ".xlsm", ".xlsx"],
-        "AluguelUBS",
+        [".xls", ".xlsm", ".xlsx"],type=None,
+        filename2save="AluguelUBS",
         str_search='(X-GM-RAW "k11@kapitalo.com.br btc UBS has:attachment newer_than:8h")',
     )
-def get_email_xp():
+def get_email_janela_bradesco(type):
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Bradesco//",
+        extensions=[".xlsx"],type=type,
+        filename2save="AluguelBradesco",
+        str_search='(X-GM-RAW "aloc_middle@bradesco.com.br ALUGUEL JANELA KAPITALO JOAO  has:attachment newer_than:10h")')
+    
+def get_email_dia_necton(type):
+
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Necton//",
+        extensions=[".xlsx"],type=type,
+        filename2save="AluguelNecton",
+        str_search='(X-GM-RAW "@necton.com.br BTC NECTON KAPITALO JOAO DIA has:attachment newer_than:8h")',
+    )
+def get_email_janela_necton(type):
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Necton//",
+        extensions=[".xlsx"],type=type,
+        filename2save="AluguelNecton",
+        str_search='(X-GM-RAW "@necton.com.br BTC NECTON KAPITALO JOAO JANELA  has:attachment newer_than:8h")')
+    
+def get_email_dia_bradesco(type):
+
+    email_gmail.get_mail_files(
+        [],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Bradesco//",
+        extensions=[".xlsx"],type=type,
+        filename2save="AluguelBradesco",
+        str_search='(X-GM-RAW "aloc_middle@bradesco.com.br ALUGUEL DIA KAPITALO JOAO has:attachment newer_than:8h")',
+    )
+
+def get_email_xp(type=None):
     email_gmail.get_mail_files(
         ["guilherme.felipe@xpi.com.br"],
         "",
         "G://Trading//K11//Aluguel//Trades//XP//",
-        [".xls", ".xlsm", ".xlsx"],
-        "AluguelXP",
+        extensions = [".xls", ".xlsm", ".xlsx"],type =type,
+        filename2save="AluguelXP",
         str_search='(X-GM-RAW "k11@kapitalo.com.br BTC - XP has:attachment newer_than:8h")',
         
     )
@@ -50,6 +90,15 @@ def get_email_liquidez():
         
     )
 
+def get_email_plural():
+    email_gmail.get_mail_files(
+        ["yves.salomao@genial.com.vc", "andre.lopes@genial.com.vc"],
+        "",
+        "G://Trading//K11//Aluguel//Trades//Plural//",
+        [".xls", ".xlsm", ".xlsx"],
+        filename2save="AluguelPlural",type='trade',
+        att_newer_than=8,
+    )
 
 
 def get_email_bofa():
@@ -58,7 +107,7 @@ def get_email_bofa():
         "",
         "G://Trading//K11//Aluguel//Trades//Bofa//",
         [".xls", ".xlsm", ".xlsx"],
-        "AluguelBofa",
+        filename2save="AluguelBofa",type='trade',
         att_newer_than=8,
     )
 
@@ -70,7 +119,7 @@ def get_email_cm():
         "",
         "G://Trading//K11//Aluguel//Trades//CM//",
         [".xls", ".xlsm", ".xlsx"],
-        "AluguelCM",
+        filename2save="AluguelCM",
         att_newer_than=8,
     )
 def get_email_ativa():
@@ -79,16 +128,16 @@ def get_email_ativa():
         "",
         "G://Trading//K11//Aluguel//Trades//Ativa//",
         [".xls", ".xlsm", ".xlsx"],
-        "AluguelAtiva",
+        filename2save="AluguelAtiva",
         str_search='(X-GM-RAW "k11@kapitalo.com.br BTC DOADOR has:attachment newer_than:8h")',
     )
-def get_email_credit():
+def get_email_credit(type=None):
     email_gmail.get_mail_files(
         [],
         "",
         "G://Trading//K11//Aluguel//Trades//Credit//",
-        [".xls", ".xlsm", ".xlsx"],
-        "AluguelCredit",
+        [".xls", ".xlsm", ".xlsx"],type=type,
+        filename2save="AluguelCredit",
         str_search='(X-GM-RAW "@credit-suisse.com has:attachment newer_than:8h")',
     )
 
@@ -97,8 +146,8 @@ def get_email_guide():
         [],
         "",
         "G://Trading//K11//Aluguel//Trades//Guide//",
-        [".xls", ".xlsm", ".xlsx"],
-        "AluguelGuide",
+        [".xls", ".xlsm", ".xlsx"],type=None,
+        filename2save="AluguelGuide",
         str_search='(X-GM-RAW "@guide.com.br has:attachment newer_than:8h")',
     )
 
@@ -140,11 +189,11 @@ def get_email_renov_itau():
 
 def get_email_itau():
     email_gmail.get_mail_files(
-        ["carolina.casseb@itaubba.com", "gabriel.gomes-sa@itaubba.com"],
+        ["carolina.casseb@itaubba.com", "gabriel.gomes-sa@itaubba.com","gabriel.sombra-falcao@itaubba.com"],
         "",
         "G://Trading//K11//Aluguel//Trades//Itau//",
-        [".xls", ".xlsm", ".xlsx"],
-        "AluguelItau",
+        [".xls", ".xlsm", ".xlsx"],type='trade',
+        filename2save="AluguelItau",
         att_newer_than=8,
     )
 
@@ -163,8 +212,8 @@ def get_email_stone():
         [],
         "",
         "G://Trading//K11//Aluguel//Trades//Stone//",
-        [".xlsx"],
-        "AluguelStone",
+        [".xlsx"],type=None,
+        filename2save="AluguelStone",
         str_search='(X-GM-RAW "@stonex.com BTC STONEX has:attachment newer_than:8h")',
     )
 
@@ -179,25 +228,7 @@ def get_email_terra():
     )
 
 
-def get_email_dia_bradesco(type):
-    print(type)
-    email_gmail.get_mail_files(
-        [],
-        "",
-        "G://Trading//K11//Aluguel//Trades//Bradesco//",
-        extensions=[".xlsx"],type=type,
-        filename2save="AluguelBradesco",
-        str_search='(X-GM-RAW "lucas.pizarro@bradescobbi.com.br ALUGUEL DIA KAPITALO JOAO has:attachment newer_than:8h")',
-    )
-def get_email_janela_bradesco(type):
-    email_gmail.get_mail_files(
-        [],
-        "",
-        "G://Trading//K11//Aluguel//Trades//Bradesco//",
-        extensions = [".xlsx"],type=type,
-        filename2save = "AluguelBradesco",
-        str_search='(X-GM-RAW "lucas.pizarro@bradescobbi.com.br ALUGUEL JANELA KAPITALO JOAO  has:attachment newer_than:8h")')
-    
+
 
 
 def get_email_santander():
@@ -231,13 +262,13 @@ def get_email_modal():
         att_newer_than=8,
 )
 
-def get_email_safra():
+def get_email_safra(type=None):
     email_gmail.get_mail_files(
-        ["william.parada@safra.com.br"],
-        "",
+        ["k11@kapitalo.com.br"],
+        "BTC Safra",
         "G://Trading//K11//Aluguel//Trades//Safra//",
-        [".xls", ".xlsm", ".xlsx"],'trade'
-        "AluguelSafra",
+        [".xls", ".xlsm", ".xlsx"],type=type,
+        filename2save="AluguelSafra",
         att_newer_than=8,
 )
     return

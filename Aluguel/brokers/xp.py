@@ -13,21 +13,19 @@ def parse_excel_xp(file_path):
 
     df = pd.read_excel(file_path)
     df.loc[2,'Unnamed: 14'] = 'Modalidade'
+    
     df.columns = df.iloc[2]
+    
     df = df.loc[3:][['Investidor','Ativo','Lado','Qtd','Tx','Vencimento','Modalidade']]
-    fundos = {
-        'KAPITALO K10 PREV MASTER': 'KAPITALO K10 PREV MASTER FIM',
-        'KAPITALO KAPPA': 'KAPITALO KAPPA MASTER FIM',
-        'KAPITALO KAPPA PREV MASTER': 'KAPITALO KAPPA PREV MASTER FIM'
-    }
-    df['Investidor'] = df['Investidor'].map(fundos)
+    print(df)
+    
     df.rename(columns={'Investidor': 'str_fundo','Ativo':'str_papel','Lado':'str_tipo','Qtd':'dbl_quantidade','Tx':'dbl_taxa','Vencimento':'dte_datavencimento'},inplace=True)
     df.fillna(0, inplace=True)
     df = df[df["str_papel"] != 0]
-    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
+    
     df["str_corretora"] = "XP"
     df["str_tipo_registro"] = df["Modalidade"].apply(
-        lambda x: "R" if x == "Balcão" else "N" 
+        lambda x: "R" if "B" in x.upper()  else "N" 
     )
     df["str_modalidade"] = df["str_tipo_registro"].apply(
         lambda x: "E1" if x == "N" else None
@@ -37,7 +35,6 @@ def parse_excel_xp(file_path):
     df["str_reversivel"] = "TD"
     
     df["str_status"] = "Emprestimo"
-    df["str_tipo"] = "D"
     df["dbl_quantidade"] = df["dbl_quantidade"].apply(lambda x: x * (-1))
     df["dte_databoleta"] = date.today().strftime("%Y-%m-%d")
     df["dte_data"] = date.today().strftime("%Y-%m-%d")

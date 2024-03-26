@@ -29,7 +29,7 @@ def parse_excel_credit(file_path):
     
     df["str_corretora"] = "Credit-Suisse"
     df["str_tipo_registro"] = df["modalidade"].apply(
-        lambda x: "R" if x == "BALCAO" else "N" if x == "D1" else None
+        lambda x: "R" if x == "BALCAO" else "N" if x == "D+1" else None
     )
     df["str_modalidade"] = df["str_tipo_registro"].apply(
         lambda x: "E1" if x == "N" else None
@@ -37,10 +37,9 @@ def parse_excel_credit(file_path):
     df["str_tipo_comissao"] = "A"
     df["dbl_valor_fixo_comissao"] = 0
     df["str_reversivel"] = "TD"
-    
     df["str_status"] = "Emprestimo"
     df["str_tipo"] = "D"
-    df["dbl_quantidade"] = df["dbl_quantidade"].apply(lambda x: x * (-1))
+    df["dbl_quantidade"] = df["dbl_quantidade"].apply(lambda x: abs(x) * (-1))
 
 
     df["dte_databoleta"] = date.today().strftime("%Y-%m-%d")

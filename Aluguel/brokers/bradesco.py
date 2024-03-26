@@ -14,6 +14,7 @@ import pandas as pd
 def parse_excel_bradesco(file_path):
 
     df = pd.read_excel(file_path)
+    
     df.columns= ['str_fundo','str_corretora','dte_datavencimento','lado','modalidade','contrato','str_papel','dbl_quantidade','dbl_taxa']
     # df.rename(
     #     columns={
@@ -32,7 +33,7 @@ def parse_excel_bradesco(file_path):
     
     df["str_corretora"] = "Bradesco"
     df["str_tipo_registro"] = df["modalidade"].apply(
-        lambda x: "R" if x == "Balcão" else "N" if x == "D1" else None
+        lambda x: "R" if "BAL" in x.upper()   else "N" if x == "D1" else None
     )
     df["str_modalidade"] = df["str_tipo_registro"].apply(
         lambda x: "E1" if x == "N" else None

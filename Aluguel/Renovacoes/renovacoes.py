@@ -9,7 +9,7 @@ import numpy as np
 import carteira_ibov
 import taxas
 import trunc
-import mapa
+import mapa_v2 as mapa
 
 holidays_br = workdays.load_holidays("BR")
 holidays_b3 = workdays.load_holidays("B3")

@@ -9,7 +9,7 @@ import numpy as np
 import carteira_ibov
 import taxas
 import trunc
-import mapa
+import mapa_v2 as mapa
 import brokers
 import os
 from boletas import get_email_aluguel

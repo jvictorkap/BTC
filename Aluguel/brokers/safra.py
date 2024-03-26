@@ -8,6 +8,10 @@ import workdays
 import numpy as np
 import pandas as pd
 
+side_bol={
+    'T':1,
+    'D':-1
+}
 
 def parse_excel_safra(file_path):
     df = pd.read_excel(file_path)
@@ -20,16 +24,17 @@ def parse_excel_safra(file_path):
             "ativo": "str_papel",
             "quantidade": "dbl_quantidade",
             "taxa": "dbl_taxa",
+            'lado':'str_tipo'
         },
         inplace=True,
     )
     df["str_tipo_registro"] = df["modalidade"].apply(
-        lambda x: "R" if x == "BALCAO" else "N" if x == "D1" else None
+        lambda x: "R" if "B" in x.upper()  else "N" 
     )
     df["str_modalidade"] = df["str_tipo_registro"].apply(
         lambda x: "E1" if x == "N" else None
     )
-    df['str_tipo']='D'
+    
     df["str_tipo_comissao"] = "A"
     df["dbl_valor_fixo_comissao"] = 0
     df["str_reversivel"] = "TD"
@@ -39,11 +44,15 @@ def parse_excel_safra(file_path):
         date.today(), 0, workdays.load_holidays()
     ).strftime("%d/%m/%Y")
     df["str_status"] = "Emprestimo"
+    df['str_tipo'] = df['str_tipo'].apply(lambda x: x[0])
+    df['dbl_quantidade']=df.apply(lambda row: 1*abs(row['dbl_quantidade'])*side_bol[row['str_tipo']],axis=1)
     
-    df['dbl_quantidade']=-df['dbl_quantidade']
+    df["dte_databoleta"] = date.today().strftime("%Y-%m-%d")
+    df["dte_data"] = date.today().strftime("%Y-%m-%d")
 
-    return df[
-        [
+    return df[[
+            "dte_databoleta",
+            "dte_data",
             "str_fundo",
             "str_corretora",
             "str_tipo",
@@ -55,7 +64,6 @@ def parse_excel_safra(file_path):
             "str_tipo_comissao",
             "dbl_valor_fixo_comissao",
             "str_papel",
-            "dbl_quantidade",
+            "dbl_quantidade",                  
             "str_status",
-        ]
-    ]
+    ]]

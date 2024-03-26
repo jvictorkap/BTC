@@ -20,7 +20,7 @@ holidays_br = workdays.load_holidays('BR')
 holidays_b3 = workdays.load_holidays('B3')
 dt = datetime.date.today()
 dt_1 = workdays.workday(dt, -1, holidays_b3)
-
+python
 LOGIN = os.getenv("EMAIL_USER")
 SENHA = os.getenv("EMAIL_PASSWORD")
 

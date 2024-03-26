@@ -16,39 +16,37 @@ import io
 passwd = "kappa.80913"
 
 
+side_bol={
+    'T':1,
+    'D':-1
+}
 def parse_excel_ubs(file_path):
 
-    file = msoffcrypto.OfficeFile(open(file_path, "rb"))
-
-    file.load_key(password="kappa.80913")  # Use password
-
-    decrypted = io.BytesIO()
-    file.decrypt(decrypted)
-
-    df = pd.read_excel(decrypted)
-    # df = pd.read_excel(file_path)
-
-    # df=df.columns(['MODALIDADE'	,'FUNDO'	,'CORRETORA'	,'PONTA'	,'VCTO',	'TAXA'	,'PAPEL'	,'QUANTIDADE'])
+   
+    df = pd.read_excel(file_path)
     df.rename(
         columns={
             "fundo": "str_fundo",
-            "Corretora": "str_corretora",
+            "corretora": "str_corretora",
             "vencimento": "dte_datavencimento",
             "ativo": "str_papel",
             "quantidade": "dbl_quantidade",
             "taxa": "dbl_taxa",
+            "lado":'str_tipo'
         },
         inplace=True,
     )
 
-    df["str_tipo"] = df['lado'].apply(lambda x: "D" if x=='DOADOR' else  "T" if x=='TOMADOR' else None)
     df.fillna(0, inplace=True)
-    df = df[df["str_tipo"] != 0]
-    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
-    # df['dte_datavencimento'] = df['dte_datavencimento'].apply(lambda x: datetime.strptime(x, '%d/%m/%y'))
+    try:
+        df['dte_datavencimento'] = df['dte_datavencimento'].astype(str).apply(lambda x: datetime.strptime(x,'%d/%m/%y'))
+    except:
+        df['dte_datavencimento'] = df['dte_datavencimento'].astype(str).apply(lambda x: datetime.strptime(x,'%Y-%m-%d'))
+    df = df[df["str_papel"] != 0]
+    
     df["str_corretora"] = "Link"
     df["str_tipo_registro"] = df["modalidade"].apply(
-        lambda x: "R" if x == "BALCAO" else "N" if x == "D+1" else None
+        lambda x: "R" if x == "BALCÃO" else "N" if x == "D1" else "R"
     )
     df["str_modalidade"] = df["str_tipo_registro"].apply(
         lambda x: "E1" if x == "N" else None
@@ -56,15 +54,12 @@ def parse_excel_ubs(file_path):
     df["str_tipo_comissao"] = "A"
     df["dbl_valor_fixo_comissao"] = 0
     df["str_reversivel"] = "TD"
-    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
-    df["str_status"] = "Emprestimo"
     
-    df["dbl_quantidade"] = df.apply(
-        lambda row: row["dbl_quantidade"]
-        if row["str_tipo"] == "T"
-        else -row["dbl_quantidade"],
-        axis=1,
-    )
+    df["str_status"] = "Emprestimo"
+
+    df['str_tipo'] = df['str_tipo'].apply(lambda x: x[0])
+    df['dbl_quantidade']=df.apply(lambda row: abs(row['dbl_quantidade'])*side_bol[row['str_tipo']],axis=1)
+
     df["dte_databoleta"] = date.today().strftime("%Y-%m-%d")
     df["dte_data"] = date.today().strftime("%Y-%m-%d")
 
@@ -86,7 +81,6 @@ def parse_excel_ubs(file_path):
             "dbl_quantidade",                  
             "str_status",
     ]]
-
 
     # return df[
     #         "dte_databoleta",

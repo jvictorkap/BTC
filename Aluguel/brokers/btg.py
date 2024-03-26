@@ -14,6 +14,7 @@ def parse_excel_BTG(file_path):
     df = pd.read_excel(file_path)
     df.rename(
         columns={
+            "Nome": "str_fundo",
             "Fundo": "str_fundo",
             "Corretora": "str_corretora",
             "Vencimento": "dte_datavencimento",
@@ -26,7 +27,7 @@ def parse_excel_BTG(file_path):
 
     df.fillna(0, inplace=True)
     df = df[df["str_papel"] != 0]
-    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
+    
     df["str_corretora"] = "BTG Pactual"
     try:
         df["dte_datavencimento"] = df["dte_datavencimento"].apply(
@@ -51,7 +52,6 @@ def parse_excel_BTG(file_path):
     df["str_tipo_comissao"] = "A"
     df["dbl_valor_fixo_comissao"] = 0
     df["str_reversivel"] = "TD"
-    df["str_fundo"] = "KAPITALO KAPPA MASTER FIM"
     df["str_status"] = "Emprestimo"
     df["str_tipo"] = df["Lado"].apply(lambda x: "D" if x == "DOADOR" else "T")
     df["dbl_quantidade"] = df.apply(

@@ -3,17 +3,17 @@ import sys
 
 # from input_boleta import input_data
 sys.path.append("..")
-
+import streamlit as st
 import argparse
 import os
 from datetime import datetime, timedelta, date
 import get_email_aluguel
-from brokers import mirae, bofa, orama, ubs, itau, btg,modal, terra, santander, cm,safra,ativa,credit,guide,xp,liquidez,stone,bradesco
+from brokers import mirae, bofa, orama, ubs, itau, btg,modal, terra, santander, cm,safra,ativa,credit,guide,xp,liquidez,stone,bradesco,necton,plural
 import workdays
 import psycopg2
 import check_boletas
 import pandas as pd
-from boletador import input_data
+# from boletador import input_data
 
 brokers = [
     "Bofa",
@@ -34,12 +34,14 @@ brokers = [
     "Credit-Suisse",
     "Liquidez",
     'Stone',
-    'Bradesco'
+    'Bradesco',
+    'Necton',
+    "Plural"
 ]
 type = ["trade", "loan", "borrow",'janela','dia']
 
 
-def main(broker, type, get_email=True):
+def main(broker, type,file=None, get_email=True):
 
     if broker=='Credit-Suisse':
         broker='Credit'
@@ -57,7 +59,7 @@ def main(broker, type, get_email=True):
     print(str(file_path))
     print(f"Working with {broker}")
     print(file_path)
-    if broker =='Bradesco':
+    if broker in ['Bradesco','Necton']:
         if get_email:
             print(f"get_email_aluguel.get_email_{type.lower()}_{broker.lower()}({type})")
             eval(f"get_email_aluguel.get_email_{type.lower()}_{broker.lower()}('{type}')")
@@ -72,8 +74,20 @@ def main(broker, type, get_email=True):
 
     else:
         print(f"No file from {broker} yet.")
-        return f"No file from {broker} yet."
+        
 
+    try:
+        if file != None:
+            file.set_index(file.columns[0], inplace=True)
+            file.to_excel('cache.xlsx')
+            file_path = "cache.xlsx"
+        else:
+            pass
+    except:
+            file.set_index(file.columns[0], inplace=True)
+            file.to_excel('cache.xlsx')
+            file_path = "cache.xlsx"
+    
     if broker == "Mirae":
 
         df = mirae.parse_excel_mirae(file_path)
@@ -101,6 +115,9 @@ def main(broker, type, get_email=True):
     elif broker == "CM":
 
         df = cm.parse_excel_cm(file_path)
+    elif broker == "Necton":
+
+        df = necton.parse_excel_necton(file_path)
 
     elif broker == "UBS":
 
@@ -138,16 +155,20 @@ def main(broker, type, get_email=True):
     elif broker == "Guide":
 
         df = guide.parse_excel_guide(file_path)   
+    elif broker == "Plural":
+
+        df = plural.parse_excel_plural(file_path)   
     elif broker == "XP":
         df = xp.parse_excel_xp(file_path)   
 
     else:
         return f"No automation ready to {broker}"
-    print(type)
+    
     # aux=check_boletas.check(df_boleta=df,df_main=pd.read_excel("C:\\Users\\joao.ramalho\\Documents\\GitHub\\BTC\\Aluguel\\Arquivos\\Doar\\Saldo-Dia\\Kappa_lend_to_day_08-12-2021.xlsx"))
     # df=df.merge(aux,on='str_papel',how='inner')
 
-    boleta_ibotz = df
+    
+    
     
 
     output_file_path = f"G://Trading//K11//Aluguel//Controle//{today.strftime('%d-%m-%Y')}//{broker}_{type}_{today.strftime('%Y%m%d')}.xlsx"
@@ -163,7 +184,8 @@ def main(broker, type, get_email=True):
 
     # input_data(df)
 
-    return f"{broker}\n Trading loaded, check G://Trading//K11//Aluguel//Controle///{broker}_{type}_{today.strftime('%Y%m%d')}.xlsx."
+    # return f"{broker}\n Trading loaded, check G://Trading//K11//Aluguel//Controle///{broker}_{type}_{today.strftime('%Y%m%d')}.xlsx."
+    return df
 
 
 if __name__ == "__main__":
@@ -174,4 +196,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     broker = args.broker
 
-    main(broker, type=args.type, get_email=args.email)
+    main(broker, type=args.type,file=None, get_email=args.email)

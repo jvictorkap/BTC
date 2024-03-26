@@ -1,4 +1,6 @@
 #
+from calendar import c
+from signal import signal
 import sys
 
 # from devolucao import get_df_devol
@@ -12,13 +14,14 @@ import carteira_ibov
 import taxas
 import os
 pd.options.mode.chained_assignment = None  # default='warn'
-import config
+import config2 as config
 import psycopg2
 import pandas as pd
 import workdays
+
 import pyodbc
 from tqdm import tqdm
-import ibotz
+import ibotz_k11 as ibotz
 #
 holidays_br = workdays.load_holidays("BR")
 holidays_b3 = workdays.load_holidays("B3")
@@ -61,11 +64,12 @@ dt_liq = workdays.workday(dt_1, 4, holidays_b3)
 
 
 def main(mapa,ctos_btc):
-
-
+    ctos_btc = ctos_btc[ctos_btc['dbl_quantidade']!=0]
+    ctos_btc['dte_data'] = dt_1.strftime('%Y-%m-%d')
+    ctos_btc['str_mercado']='Emprestimo RV'
     ind_devol =mapa[mapa['devol_tomador']!=0][['fundo','mesa','str_estrategia','codigo','custodia_0','devol_tomador']]
-    ajuste = mapa[mapa['to_borrow_0']!=0][['fundo','mesa','str_estrategia','codigo','to_borrow_0']]
-    sinal_ajuste = ajuste[['fundo','codigo','to_borrow_0']]
+    ajuste = mapa[mapa['to_borrow_0']!=0][['fundo','mesa','str_estrategia','codigo','position','pos_tomada','pos_doada','to_borrow_0']]
+    sinal_ajuste = ajuste[['fundo','codigo','position','to_borrow_0']]
     ind_devol['devol_tomador'] = -ind_devol['devol_tomador']
     ind_devol = ind_devol.merge(sinal_ajuste,on=['fundo','codigo'],how='inner').drop_duplicates()
 
@@ -77,6 +81,7 @@ def main(mapa,ctos_btc):
     ctos_btc.rename(columns={'str_fundo':'fundo','str_mesa':'mesa'},inplace=True)
     devol = ctos_btc.merge(ind_devol, on=["fundo",'mesa','str_estrategia',"codigo"], how="inner")
     devol = devol.drop_duplicates()
+
     devol = devol.loc[(devol['tipo']=='T') & (devol['dbl_quantidade']>0)]
 
     devol = devol.sort_values('codigo')
@@ -94,8 +99,67 @@ def main(mapa,ctos_btc):
         ind_devol.loc[(ind_devol['fundo']==row['fundo'])&(ind_devol['codigo']==row['codigo'])&(ind_devol['mesa']==row['mesa'])&(ind_devol['str_estrategia']==row['str_estrategia']),'indicativo devol'] = round( saldo -min(row['dbl_quantidade'],saldo) ,2)
 
 
+  
+
+    map_ajuste = ajuste
+
+    map_ajuste['to_borrow_0'] = -map_ajuste['to_borrow_0']
+    map_ajuste.index = [x+1 for x in range(map_ajuste.shape[0])]
     rebal_tomadores = devol[devol['Devolucao']!=0]
 
+  
+    map_ajuste = map_ajuste[map_ajuste['to_borrow_0']!=0] 
+
+    ctos_btc_d = ctos_btc[ctos_btc['tipo']=='D']
+    ctos_btc_t = ctos_btc[ctos_btc['tipo']=='T']
+    fill_janela_real = mapa.groupby(['fundo','codigo']).agg({'custodia_0':sum}).reset_index()
+    fill_janela_real = fill_janela_real[fill_janela_real['custodia_0']>=0]
+    
+    
+    
+
+
+    devol_d = ctos_btc_d.merge(map_ajuste, on=["fundo",'mesa','str_estrategia',"codigo"], how="inner")
+
+
+    ctos_btc_d.to_excel('view.xlsx')    
+    devol_d = devol_d.merge(fill_janela_real[['fundo','codigo']],on=['fundo','codigo'],how='inner')
+
+    devol_d['to_borrow_0'] = devol_d['to_borrow_0'].fillna(0)
+    devol_d = devol_d[devol_d['to_borrow_0']!=0]
+    devol_d['dbl_quantidade'] = abs(devol_d['dbl_quantidade'])
+
+    devol_d['Alocacao'] = 0
+    devol_d['estrategia target'] = 0
+    devol_d = dist_ctos(alloc_tomadores=devol_d)
+    devol_d.index = [x+1 for x in range(devol_d.shape[0])]
+    map_ajuste.index = [x+1 for x in range(map_ajuste.shape[0])]
+
+    devol_d['volta'] = 0
+
+    devol_d['estrategia target'] = 0
+
+    devol_d['mesa target'] = 0
+    # devol_d.to_excel('devol_d_antes.xlsx')
+
+    with tqdm(total=map_ajuste.shape[0]) as pbar:
+        for i, row in (map_ajuste.iterrows()):
+            pbar.update(1)
+            saldo = row['to_borrow_0']
+
+            for x, x_row in devol_d.iterrows():
+                if int(saldo) ==0:
+                    break
+                if (x_row['codigo']==row['codigo']) & (x_row['fundo']==row['fundo']):
+                    if (devol_d.loc[x,'estrategia target']==0):
+                        devol_d.loc[x,'volta'] = min(saldo,x_row['dbl_quantidade'])
+                        devol_d.loc[x,'mesa target'] = row['mesa']
+                        devol_d.loc[x,'estrategia target'] = row['str_estrategia']
+                        saldo = saldo - min(saldo,x_row['dbl_quantidade'])
+                        map_ajuste.loc[i,'to_borrow_0']  = saldo
+
+    devol_d.to_excel('devol_d.xlsx')
+    
     alloc_tomadores = rebal_tomadores
 
     filt_map = mapa[mapa['custodia_0']>0][['fundo','mesa','str_estrategia','codigo']]
@@ -108,16 +172,12 @@ def main(mapa,ctos_btc):
 
     alloc_tomadores['estrategia target'] = 0
 
-    map_ajuste = ajuste
-
-    map_ajuste['to_borrow_0'] = -map_ajuste['to_borrow_0']
-
     alloc_tomadores = dist_ctos(alloc_tomadores=alloc_tomadores)
 
     alloc_tomadores = alloc_tomadores.sort_values(by=['quebra'], ascending=False)
 
     alloc_tomadores.index = [x+1 for x in range(alloc_tomadores.shape[0])]
-    map_ajuste.index = [x+1 for x in range(map_ajuste.shape[0])]
+
 
 
     alloc_tomadores['volta'] = 0
@@ -157,6 +217,7 @@ def main(mapa,ctos_btc):
 
     map_ajuste = map_ajuste[map_ajuste['to_borrow_0']!=0]
 
+    
     saldo_alloc_tomadores.index = [x+1 for x in range(saldo_alloc_tomadores.shape[0])]
     map_ajuste.index = [x+1 for x in range(map_ajuste.shape[0])]
     
@@ -187,51 +248,7 @@ def main(mapa,ctos_btc):
                         map_ajuste.loc[i,'to_borrow_0']  = saldo
                         # else:
                         #     break
-    map_ajuste = map_ajuste[map_ajuste['to_borrow_0']!=0] 
 
-    ctos_btc_d = ctos_btc[ctos_btc['tipo']=='D']
-    ctos_btc_t = ctos_btc[ctos_btc['tipo']=='T']
-    fill_janela_real = mapa.groupby(['fundo','codigo']).agg({'custodia_0':sum}).reset_index()
-    fill_janela_real = fill_janela_real[fill_janela_real['custodia_0']>=0]
-    
-
-
-    devol_d = ctos_btc_d.merge(map_ajuste, on=["fundo",'mesa','str_estrategia',"codigo"], how="inner")
-
-    ctos_btc_d.to_excel('view.xlsx')
-    devol_d = devol_d.merge(fill_janela_real[['fundo','codigo']],on=['fundo','codigo'],how='inner')
-
-    devol_d['to_borrow_0'] = devol_d['to_borrow_0'].fillna(0)
-    devol_d = devol_d[devol_d['to_borrow_0']!=0]
-    devol_d['dbl_quantidade'] = abs(devol_d['dbl_quantidade'])
-    devol_d['Alocacao'] = 0
-    devol_d['estrategia target'] = 0
-    devol_d = dist_ctos(alloc_tomadores=devol_d)
-    devol_d.index = [x+1 for x in range(devol_d.shape[0])]
-    map_ajuste.index = [x+1 for x in range(map_ajuste.shape[0])]
-
-    devol_d['volta'] = 0
-
-    devol_d['estrategia target'] = 0
-
-    devol_d['mesa target'] = 0
-
-
-    with tqdm(total=map_ajuste.shape[0]) as pbar:
-        for i, row in (map_ajuste.iterrows()):
-            pbar.update(1)
-            saldo = row['to_borrow_0']
-            for x, x_row in devol_d.iterrows():
-                if int(saldo) ==0:
-                    break
-                if (x_row['codigo']==row['codigo']) & (x_row['fundo']==row['fundo']):
-                    if (devol_d.loc[x,'estrategia target']==0):
-                        devol_d.loc[x,'volta'] = min(saldo,x_row['dbl_quantidade'])
-                        devol_d.loc[x,'mesa target'] = row['mesa']
-                        devol_d.loc[x,'estrategia target'] = row['str_estrategia']
-                        saldo = saldo - min(saldo,x_row['dbl_quantidade'])
-                        map_ajuste.loc[i,'to_borrow_0']  = saldo
-    
     a = alloc_tomadores.groupby(
     [
     'dte_data', 'fundo', 'str_mercado', 'str_codigo', 'str_serie', 'mesa',
@@ -262,7 +279,9 @@ def main(mapa,ctos_btc):
     ]
     ).agg({'volta':sum}).reset_index()
 
+
     devol = devol[devol['estrategia target']!=0]
+
 
     tomador = pd.concat([a,saldo_alloc_tomadores])
 
@@ -296,10 +315,10 @@ def main(mapa,ctos_btc):
 
     filt_toma['test'] = filt_toma['dbl_quantidade']+filt_toma['alloc_t']
     filt_toma = filt_toma[filt_toma['test']>=0]
-    print(filt_toma)
+
 
     tomador_geral = tomador_geral[tomador_geral['str_numcontrato'].isin(filt_toma['str_numcontrato'])]
-    print(tomador_geral)
+
     
     columns = [
     'str_fundo',
@@ -350,6 +369,7 @@ def main(mapa,ctos_btc):
 
 
     devol_out = devol[['fundo','mesa','str_estrategia','codigo','str_serie','volta','str_numcontrato']]
+
     devol_out['dbl_quantidade'] = abs(devol_out['volta'])
 
 
@@ -365,151 +385,184 @@ def main(mapa,ctos_btc):
 
     devol_in['dbl_quantidade'] = -devol_out['volta']
 
-    targets = mapa[mapa['custodia_0']>=0]
+    targets = mapa[mapa['custodia_0']>0]
     
     targets_all = targets.groupby(['fundo','codigo']).agg({'custodia_0':sum}).reset_index().rename(columns={'custodia_0':'total'})
 
     targets = targets.merge(targets_all,on=['fundo','codigo'],how='inner')
 
-
+    
 
     targets = targets.merge(devol_in[['fundo','codigo']].drop_duplicates(),on=['fundo','codigo'],how='inner')
     
+
     targets = targets[['fundo','mesa','str_estrategia','codigo','custodia_0','total']]
+    
     targets['prop'] = targets['custodia_0']/targets['total']
     targets = targets[['fundo','mesa','str_estrategia','codigo','prop']].fillna(0)
     targets = targets[targets['prop']!=0]
 
+    
     aux = devol_in.merge(targets[['fundo','mesa','str_estrategia','codigo','prop']].fillna(0),on=['fundo','codigo'],how='inner')
-    print(aux)
-    aux['dbl_quantidade'] = (aux['dbl_quantidade']*aux['prop']).astype(int)
+
+    if not aux.empty:
+        aux['prop'] = aux.apply(lambda row: 1 if ((abs(row['dbl_quantidade'])==1) & (row['prop']>=0.5) ) else row['prop'],axis=1)
 
 
-
-    ## Preparar boleta de ajuste doador
-    devol_final = pd.concat([devol_out,aux])
-
-    devol_final = devol_final[['fundo','mesa','str_estrategia','codigo','str_serie','dbl_quantidade','str_numcontrato']]
-
-    filt_devol = devol_final[devol_final['dbl_quantidade']>0].rename(columns={'dbl_quantidade':'alloc_d'}).merge(ctos_btc_d,on=['fundo','str_estrategia','mesa','str_numcontrato'],how='inner')
-
-    filt_devol['test'] = filt_devol['dbl_quantidade']+filt_devol['alloc_d']
-    filt_devol = filt_devol[filt_devol['test']<=0]
-
-    devol_final = devol_final[devol_final['str_numcontrato'].isin(filt_devol['str_numcontrato'])]
-
-
-    devol_final.columns = columns
-    devol_final['str_corretora'] = 'Interna'
-    devol_final['str_clearing'] = 'Interna'
-    devol_final['str_mercado'] = 'Emprestimo RV/AjustePosicao'
-    devol_final['str_codigo'] = devol_final['str_serie'].apply(lambda x: x[0:4])
-    devol_final['dbl_preco'] = 0
-    devol_final['SIDE'] = devol_final['dbl_quantidade'].apply(lambda x: 'BUY' if x>0 else 'SELL')
-
-    
-    devol_final = devol_final[[
-    'str_fundo',
-    'str_mesa',
-    'str_estrategia',
-    'str_corretora',
-    'str_clearing',
-    'str_mercado',
-    'str_codigo', 
-    'str_serie',
-    'dbl_quantidade',
-    'dbl_preco',
-    'SIDE',
-    'str_numcontrato']]
-
-    devol_final.columns = ["ALOCACAO",
-        "MESA",
-        "ESTRATEGIA",
-        "CLEARING",
-        "CONTRA",
-        "TIPO",
-        "CODIGO",
-        "SERIE",
-        "NOTIONAL",
-        "PREMIO",
-        "SIDE",
-        "OBS",]
-
-    devol_final = devol_final[["ALOCACAO",
-        "MESA",
-        "ESTRATEGIA",
-        "CLEARING",
-        "CONTRA",
-        "TIPO",
-        "CODIGO",
-        "SERIE",
-        "NOTIONAL",
-        "PREMIO",
-        "SIDE",
-        "OBS",]]
-    
-    print(tomador_geral.groupby(['CODIGO']).agg({'NOTIONAL':sum}))
-    ask = input('Boletar tomador? (s/n)')
-    tomador_geral.to_excel('tomador_geral.xlsx')
-    if ask.lower()=='s':
-        print(ibotz.df_to_ibotz_ajuste(tomador_geral))
+        aux['dbl_quantidade'] = (aux['dbl_quantidade']*aux['prop']).astype(int)
+        
+        
         
 
 
-    print('---- REAJUSTE CONTRATOS DOADORES ------')
+        ## Preparar boleta de ajuste doador
+        devol_final = pd.concat([devol_out,aux])
 
-    ajuste  = devol_final.groupby(['OBS']).agg({'NOTIONAL':sum}).reset_index().rename(columns={'NOTIONAL':'ajuste'})
+        devol_final = devol_final[['fundo','mesa','str_estrategia','codigo','str_serie','dbl_quantidade','str_numcontrato']]
 
-    devol_final = devol_final.merge(ajuste,on=['OBS'],how='left')
-    devol_final.loc[devol_final['NOTIONAL']>0,'NOTIONAL'] = devol_final.loc[devol_final['NOTIONAL']>0,'NOTIONAL'] -  devol_final.loc[devol_final['NOTIONAL']>0,'ajuste']
-    devol_final = devol_final[["ALOCACAO",
-        "MESA",
-        "ESTRATEGIA",
-        "CLEARING",
-        "CONTRA",
-        "TIPO",
-        "CODIGO",
-        "SERIE",
-        "NOTIONAL",
-        "PREMIO",
-        "SIDE",
-        "OBS",]]
+        filt_devol = devol_final[devol_final['dbl_quantidade']>0].rename(columns={'dbl_quantidade':'alloc_d'}).merge(ctos_btc_d,on=['fundo','str_estrategia','mesa','str_numcontrato'],how='inner')
+
+        filt_devol['test'] = filt_devol['dbl_quantidade']+filt_devol['alloc_d']
+        filt_devol = filt_devol[filt_devol['test']<=0]
+
+        devol_final = devol_final[devol_final['str_numcontrato'].isin(filt_devol['str_numcontrato'])]
+
+
+        devol_final.columns = columns
+        devol_final['str_corretora'] = 'Interna'
+        devol_final['str_clearing'] = 'Interna'
+        devol_final['str_mercado'] = 'Emprestimo RV/AjustePosicao'
+        devol_final['str_codigo'] = devol_final['str_serie'].apply(lambda x: x[0:4])
+        devol_final['dbl_preco'] = 0
+        devol_final['SIDE'] = devol_final['dbl_quantidade'].apply(lambda x: 'BUY' if x>0 else 'SELL')
+
+        
+        devol_final = devol_final[[
+        'str_fundo',
+        'str_mesa',
+        'str_estrategia',
+        'str_corretora',
+        'str_clearing',
+        'str_mercado',
+        'str_codigo', 
+        'str_serie',
+        'dbl_quantidade',
+        'dbl_preco',
+        'SIDE',
+        'str_numcontrato']]
+
+        devol_final.columns = ["ALOCACAO",
+            "MESA",
+            "ESTRATEGIA",
+            "CLEARING",
+            "CONTRA",
+            "TIPO",
+            "CODIGO",
+            "SERIE",
+            "NOTIONAL",
+            "PREMIO",
+            "SIDE",
+            "OBS",]
+
+        devol_final = devol_final[["ALOCACAO",
+            "MESA",
+            "ESTRATEGIA",
+            "CLEARING",
+            "CONTRA",
+            "TIPO",
+            "CODIGO",
+            "SERIE",
+            "NOTIONAL",
+            "PREMIO",
+            "SIDE",
+            "OBS",]]
+        
+        print('---- REAJUSTE CONTRATOS DOADORES ------')
+        devol_final = devol_final.groupby(['ALOCACAO','MESA','ESTRATEGIA','CLEARING','CONTRA','TIPO','CODIGO','SERIE','PREMIO','SIDE','OBS']).agg({'NOTIONAL':sum}).reset_index()
+        ajuste  = devol_final.groupby(['OBS']).agg({'NOTIONAL':sum}).reset_index().rename(columns={'NOTIONAL':'ajuste'})
+        
+        devol_final = devol_final.merge(ajuste,on=['OBS'],how='inner')
+        
+
+        devol_final.loc[devol_final['NOTIONAL']>0,'NOTIONAL'] = devol_final.loc[devol_final['NOTIONAL']>0,'NOTIONAL'] -  devol_final.loc[devol_final['NOTIONAL']>0,'ajuste']
+        
+        devol_final = devol_final[["ALOCACAO",
+            "MESA",
+            "ESTRATEGIA",
+            "CLEARING",
+            "CONTRA",
+            "TIPO",
+            "CODIGO",
+            "SERIE",
+            "NOTIONAL",
+            "PREMIO",
+            "SIDE",
+            "OBS",]]
+        
+        
+        print(devol_final.groupby(['OBS']).agg({'NOTIONAL':sum}))
+
+        ajuste_final = devol_final.groupby(['OBS']).agg({'NOTIONAL':sum}).reset_index().rename(columns={'NOTIONAL':'ajuste'})
+        
+        ajuste_final = ajuste_final[ajuste_final['ajuste']!=0]
+        
+        devol_final = ajuste_func(devol_final,ajuste_final)
+
+        print('Ajuste: ',devol_final['NOTIONAL'].sum())
+        print(devol_final.groupby(['ALOCACAO','CODIGO','ESTRATEGIA']).agg({'NOTIONAL':sum}))
+        devol_final.to_excel('devol_final.xlsx')
+        # ask_d = input('Boletar doador? (s/n)')
+        ask_d = 's'
+        if ask_d.lower()=='s':
+            print(ibotz.df_to_ibotz_ajuste(devol_final))
+            devol_final.to_excel(f"doador__2_{dt.strftime('%HH%MM')}.xlsx")
     
     
-    print(devol_final.groupby(['OBS']).agg({'NOTIONAL':sum}))
-
-    ajuste_final = devol_final.groupby(['OBS']).agg({'NOTIONAL':sum}).reset_index().rename(columns={'NOTIONAL':'ajuste'})
+    print(tomador_geral.groupby(['ALOCACAO','CODIGO','ESTRATEGIA']).agg({'NOTIONAL':sum}))
+    # ask = input('Boletar tomador? (s/n)')
+    ask = 's'
+    tomador_geral.to_excel('tomador_geral.xlsx')
+    if ask.lower()=='s':
+        print(ibotz.df_to_ibotz_ajuste(tomador_geral))
+        tomador_geral.to_excel(f"tomador_2_{dt.strftime('%HH%MM')}.xlsx")
     
-    ajuste_final = ajuste_final[ajuste_final['ajuste']!=0]
 
-    devol_final = ajuste_func(devol_final,ajuste_final)
+    boleta_final = pd.concat([tomador_geral,devol_final])
+
+    boleta_final.to_excel('boleta_final.xlsx')
 
 
-    print(devol_final.groupby(['OBS']).agg({'NOTIONAL':sum}))
-    devol_final.to_excel('devol_final.xlsx')
-    ask_d = input('Boletar doador? (s/n)')
-    if ask_d.lower()=='s':
-        print(ibotz.df_to_ibotz_ajuste(devol_final))
-    
+
+
 
     
 
 def ajuste_func(data,ajuste: pd.DataFrame):
     for i, ajuste_row in ajuste.iterrows():
-        aux = data[data['OBS']==ajuste_row['OBS']].sort_values(by=['NOTIONAL'],ascending=True).reset_index(drop=True)
-        fundo = aux.iloc[0]['ALOCACAO']
-        mesa = aux.iloc[0]['MESA']
-        estrat = aux.iloc[0]['ESTRATEGIA']  
-        cod = aux.iloc[0]['CODIGO']
-        notional = aux.iloc[0]['NOTIONAL']
-        obs = aux.iloc[0]['OBS'] 
-        aux_ajuste = ajuste.loc[ajuste['OBS']==obs].reset_index().iloc[0]['ajuste'].item()
-        data.loc[( (data['ALOCACAO']==fundo)& (data['MESA']==mesa)& (data['ESTRATEGIA']==estrat)& (data['CODIGO']==cod)&(data['NOTIONAL']==notional)&(data['OBS']==obs)),'NOTIONAL']  = data.loc[( (data['ALOCACAO']==fundo)& (data['MESA']==mesa)& (data['ESTRATEGIA']==estrat)& (data['CODIGO']==cod)&(data['NOTIONAL']==notional)&(data['OBS']==obs)),'NOTIONAL'].item()  - aux_ajuste
-        
+        try:
+            aux = data[data['OBS']==ajuste_row['OBS']].sort_values(by=['NOTIONAL'],ascending=True).reset_index(drop=True)
+            fundo = aux.iloc[0]['ALOCACAO']
+            mesa = aux.iloc[0]['MESA']
+            estrat = aux.iloc[0]['ESTRATEGIA']  
+            cod = aux.iloc[0]['CODIGO']
+            notional = aux.iloc[0]['NOTIONAL']
+            obs = aux.iloc[0]['OBS'] 
+            aux_ajuste = ajuste.loc[ajuste['OBS']==obs].reset_index().iloc[0]['ajuste'].item()
+            data.loc[( (data['ALOCACAO']==fundo)& (data['MESA']==mesa)& (data['ESTRATEGIA']==estrat)& (data['CODIGO']==cod)&(data['NOTIONAL']==notional)&(data['OBS']==obs)),'NOTIONAL']  = data.loc[( (data['ALOCACAO']==fundo)& (data['MESA']==mesa)& (data['ESTRATEGIA']==estrat)& (data['CODIGO']==cod)&(data['NOTIONAL']==notional)&(data['OBS']==obs)),'NOTIONAL'].tolist()[0]  - aux_ajuste
+        except:
+            pass
         print(" Ajustando "+obs+ "\n")        
 
     return data
 
+
+
+# def force_rebal(mapa,ctos_btc):
+
+
+
+
+#     return rebal
 
 def dist_ctos(alloc_tomadores):
        
@@ -568,4 +621,138 @@ def qtd_dist(row):
 
 if __name__=='__main__':
 
-    main(pd.read_excel('mapa_v2.xlsx'),pd.read_excel('ctos_btc.xlsx'))
+    ctos_btc_of =pd.read_excel(r'C:\Users\joao.ramalho\Documents\GitHub\BTC\Aluguel\ctos_btc.xlsx')
+
+    prices =ctos_btc_of[['str_numcontrato','preco']].drop_duplicates()
+    prices = dict(zip(prices['str_numcontrato'],prices['preco']))
+
+    db_conn_test = psycopg2.connect(
+    host=config.DB_TESTE_HOST,
+    dbname=config.DB_TESTE_NAME,
+    user=config.DB_TESTE_USER,
+    password=config.DB_TESTE_PASS)
+
+    query = f"select * from tbl_alugueisconsolidados where dte_data='{dt_1.strftime('%Y-%m-%d')}' and str_mesa in ('Kapitalo 11.1','Kapitalo 1.0')"
+
+    query_ibotz = f" select str_fundo,str_mesa,str_mercado,str_estrategia,str_codigo,str_serie, str_numcontrato,sum(dbl_quantidade) as lote_ajustado  from ibotz.tbl_boletasalugueis_ibotz where dte_data='{dt.strftime('%Y-%m-%d')}' and str_mesa in ('Kapitalo 11.1','Kapitalo 1.0') and str_mercado = 'Emprestimo RV/AjustePosicao' group by str_fundo,str_mesa,str_mercado,str_estrategia,str_codigo,str_serie, str_numcontrato"
+
+
+
+    btc_ibotz = pd.read_sql(query_ibotz,db_conn_test)
+
+    btc_ibotz['str_serie'] = btc_ibotz['str_serie'].apply(lambda x: x.split('/')[0])
+    btc_ibotz = btc_ibotz.groupby(['str_fundo','str_mesa','str_mercado','str_estrategia','str_codigo','str_serie', 'str_numcontrato']).sum().reset_index()
+
+    ctos_btc = pd.read_sql(query, db_conn_test)
+    if not btc_ibotz.empty:
+        ctos_btc = ctos_btc.merge(btc_ibotz,on=['str_fundo', 'str_mesa', 'str_estrategia', 'str_codigo', 'str_serie',
+        'str_numcontrato'],how='outer').fillna(0)
+    else:
+        ctos_btc['lote_ajustado'] = 0
+    # btc_ibotz.columns = ['index','str_fundo','str_mesa'	,'str_estrategia','clearing','contra','tipo','str_codigo','str_serie','lote_ajustado','dbl_preco','side','str_numcontrato']
+    # aux_columns = ctos_btc.columns
+
+    ctos_btc = ctos_btc.groupby(['str_fundo', 'str_mesa', 'str_estrategia', 'str_codigo', 'str_serie','str_numcontrato']).agg({'dbl_quantidade':sum,'lote_ajustado':sum}).reset_index()
+    # ctos_btc['preco'] = ctos_btc['str_numcontrato'].map(prices)
+    ctos_btc['dbl_quantidade_new'] =ctos_btc['dbl_quantidade']+ctos_btc['lote_ajustado']
+    ctos_btc.to_excel('ctos_ajustados.xlsx')
+    ctos_btc['tipo'] = ctos_btc['str_serie'].apply(lambda x: x.split('-')[1])
+    ctos_btc['codigo'] = ctos_btc['str_serie'].apply(lambda x: x.split('-')[0])
+    ctos_btc['test'] = ctos_btc.apply(lambda row: False if ((row['tipo']=='T')& (row['dbl_quantidade_new']<0) ) else False if ((row['tipo']=='D')& (row['dbl_quantidade_new']>0) ) else True,axis=1 )
+
+    ajuste = ctos_btc[ctos_btc['test']==False]
+    print(ajuste)
+    target_ajuste = ctos_btc[ctos_btc['test']==True]
+    target_ajuste['dbl_quantidade_abs'] = target_ajuste['dbl_quantidade_new'].apply(lambda x: abs(x))
+    target_df = pd.DataFrame()
+    ajustes_targets = target_ajuste[['str_fundo','str_mesa','str_serie','str_estrategia','str_numcontrato','dbl_quantidade_new']]
+
+
+    ajuste = ajuste[['str_fundo','str_mesa','str_estrategia','codigo','str_serie','tipo','dbl_quantidade_new','str_numcontrato']]
+
+    
+    # aux = ajuste[ajuste['str_numcontrato']=='2023092000507940640001-1'].copy()
+    aux = ajuste.copy()
+    boletas = pd.DataFrame()
+    if not aux.empty:
+        for i,row in aux.iterrows():
+            if ajustes_targets.loc[ajustes_targets['str_numcontrato']==row['str_numcontrato']].shape[0]==1:
+                
+                if (ajustes_targets.loc[ajustes_targets['str_numcontrato']==row['str_numcontrato'],'dbl_quantidade_new'].item() + row['dbl_quantidade_new'])>=0:
+                    aux_target = ajustes_targets.loc[ajustes_targets['str_numcontrato']==row['str_numcontrato']].copy()
+                    aux_target['dbl_quantidade_new'] = row['dbl_quantidade_new']
+                    
+                    boletas = pd.concat([aux_target,boletas])
+                    
+                    boletas = boletas.append({
+                        'str_fundo':row['str_fundo'], 
+                        'str_mesa':row['str_mesa'],
+                        'str_serie':row['str_serie'],
+                        'str_estrategia':row['str_estrategia'],
+                        'str_numcontrato':row['str_numcontrato'],
+                        'dbl_quantidade_new':-row['dbl_quantidade_new']
+                    },ignore_index=True)
+                elif row['tipo']=='D':
+                    aux_target = ajustes_targets.loc[ajustes_targets['str_numcontrato']==row['str_numcontrato']].copy()
+                    aux_target['dbl_quantidade_new'] = row['dbl_quantidade_new']
+                    
+                    boletas = pd.concat([aux_target,boletas])
+                    
+                    boletas = boletas.append({
+                        'str_fundo':row['str_fundo'], 
+                        'str_mesa':row['str_mesa'],
+                        'str_serie':row['str_serie'],
+                        'str_estrategia':row['str_estrategia'],
+                        'str_numcontrato':row['str_numcontrato'],
+                        'dbl_quantidade_new':-row['dbl_quantidade_new']
+                    },ignore_index=True)
+                
+            else:
+                
+                aux_target = ajustes_targets.loc[ajustes_targets['str_numcontrato']==row['str_numcontrato']].copy()
+                aux_target['prop'] = aux_target['dbl_quantidade_new']/aux_target['dbl_quantidade_new'].sum()
+                aux_target['dbl_quantidade_new'] = (aux_target['prop']*row['dbl_quantidade_new']).round(0)
+                boletas = pd.concat([aux_target,boletas])
+                boletas = boletas.append({
+                    'str_fundo':row['str_fundo'], 
+                    'str_mesa':row['str_mesa'],
+                        'str_serie':row['str_serie'],
+                        'str_estrategia':row['str_estrategia'],
+                        'str_numcontrato':row['str_numcontrato'],
+                        'dbl_quantidade_new':-row['dbl_quantidade_new']
+                },ignore_index=True).fillna(0)
+            
+        print(boletas)
+        
+        boletas  = boletas[boletas['dbl_quantidade_new']!=0]
+
+        aux_ajuste = boletas.groupby('str_numcontrato').sum().reset_index()
+
+
+        aux_ajuste = aux_ajuste[aux_ajuste['dbl_quantidade_new']!=0]
+
+
+        aux_ajuste = aux_ajuste.set_index('str_numcontrato')['dbl_quantidade_new'].to_dict()
+
+
+        for i,value in aux_ajuste.items():
+            aux_max = boletas.loc[boletas['str_numcontrato']==i,'dbl_quantidade_new'].max()
+            boletas.loc[(boletas['str_numcontrato']==i)&(boletas['dbl_quantidade_new']==aux_max),'dbl_quantidade_new'] = boletas.loc[(boletas['str_numcontrato']==i)&(boletas['dbl_quantidade_new']==aux_max),'dbl_quantidade_new']  - aux_ajuste[i]
+
+
+        boletas['str_corretora']='Interna'
+        boletas['str_clearing']='Interna'
+        boletas['str_mercado']='Emprestimo RV/AjustePosicao'
+
+        boletas['str_codigo'] = boletas['str_serie'].apply(lambda x: x[:4])
+
+        boletas['dbl_preco'] = 0
+
+        boletas = boletas[['str_fundo','str_mesa','str_estrategia','str_clearing','str_corretora','str_mercado','str_codigo','str_serie','dbl_quantidade_new','dbl_preco','str_numcontrato']]
+
+        boletas.columns = ['ALOCACAO', 'MESA', 'ESTRATEGIA', 'CLEARING', 'CONTRA', 'TIPO','CODIGO', 'SERIE', 'NOTIONAL', 'PREMIO', 'OBS']
+
+        ibotz.df_to_ibotz_ajuste(boletas)
+        print('Ajuste de contratos realizado')
+    print("Starting rebal ...")
+    main(pd.read_excel(f"G:\Trading\K11\Aluguel\Arquivos\Main\main_v2_{dt.strftime('%Y-%m-%d')}.xlsx"),ctos_btc_of)

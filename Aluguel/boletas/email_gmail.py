@@ -163,12 +163,11 @@ def save_attachments(message, directory, extensions, filename2save,type):
                 if filename2save != "":
                     msg_date = msgtime.strftime("%Y%m%d")
 
-                    if "janela" in type:
+                    if type == "janela":
                         new_file_name = (
                             f"{filename2save}_janela_{msg_date}{file_extension}"
                         )
-                    elif "dia" in type:
-
+                    elif type =='dia':
                         new_file_name = (
                             f"{filename2save}_dia_{msg_date}{file_extension}"
                         )
@@ -240,10 +239,6 @@ def get_mail_files(
     password = PASSWORD
     recover(resumeFile)
     print(str_search)
-    # str_local_directory = 'Z://' # utils.f_get_folder_name()
-    # str_date=utils.f_get_date_formated()
-    # if 'attachments' not in os.listdir(os.getcwd()):
-    #    os.mkdir('attachments')
     for msg in generate_mail_messages(user_name, password, resumeFile, str_search):
         # save_attachments(msg, 'attachments')
         # msg = base64.b64decode(msg)

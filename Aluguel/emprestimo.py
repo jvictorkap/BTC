@@ -11,6 +11,7 @@ import taxas
 import trunc
 import mapa
 
+
 holidays_br = workdays.load_holidays("BR")
 holidays_b3 = workdays.load_holidays("B3")
 
@@ -20,12 +21,14 @@ holidays_b3 = workdays.load_holidays("B3")
 
 def compara_taxa(tx_real, tx_media):
 
-    if tx_media > tx_real * 30:
+    if tx_media > tx_real * 2:
         return "Doar"
     else:
         return "Devolver"
 
-def main(main_df:pd.DataFrame,dt=None):
+
+
+def main(side,dt=None):
     # df = pd.read_excel(r"G:\Trading\K11\Python\Aluguel\Tables\Book_corretagens.xlsx")
 
     
@@ -44,78 +47,64 @@ def main(main_df:pd.DataFrame,dt=None):
 
 
     # emprestimos_abertosv2 = emprestimos_abertosv2[['str_numcontrato','dbl_quantidade']].rename(columns={'str_numcontrato':'contrato','dbl_quantidade':'new lote'})
-
-    
+    taxas = DB.get_taxasalugueis(dt_1)[['tckrsymb','takravrgrate']].rename(columns={'tckrsymb':'codigo','takravrgrate':'taxa d-1'})
+    taxas['taxa d-1']  = taxas["taxa d-1"].astype(float)
 
     # saldo_custodia = mapa.get_df_custodia(main_df)
 
 
-    emprestimos_abertos.columns = ['data','fundo','corretora','tipo','taxa','vencimento','preco','reversivel','codigo','contrato','quantidade']
+    emprestimos_abertos.columns = ['data','fundo','corretora','tipo','vencimento','taxa','preco','reversivel','codigo','contrato','quantidade']
+
+
+
+
+
+
+
 
     emprestimos_abertos = emprestimos_abertos[['data','fundo','corretora','tipo','taxa','vencimento','preco','reversivel','codigo','contrato','quantidade']]
+    emprestimos_abertos_tomador = emprestimos_abertos
+    if side=='Tomador':
+    
+    
+        emprestimos_abertos_tomador["taxa"] = (
+        emprestimos_abertos_tomador["taxa"].apply(lambda x: round(x,2) ).astype(float)
+        )
+
+        emprestimos_abertos_tomador["corretora"] = emprestimos_abertos_tomador[
+        "corretora"
+        ].astype(str)
+
+        # emprestimos_abertos_tomador["taxa corretagem"] = emprestimos_abertos_tomador.apply(
+        # lambda row: taxas.taxa_corretagem_aluguel(df, row["corretora"], "T", row["taxa"]),
+        # axis=1,
+        # )
+        emprestimos_abertos_tomador["negeletr type"] = 'R'
+        # emprestimos_abertos_tomador["negeletr type"] = emprestimos_abertos_tomador[
+        # "negeletr"cd ..
+        # ].apply(lambda x: "R" if (x == False) else "N")
 
 
-    emprestimos_abertos_tomador = emprestimos_abertos[emprestimos_abertos["tipo"] == "T"]
-
-    emprestimos_abertos_tomador["taxa"] = (
-    emprestimos_abertos_tomador["taxa"].apply(lambda x: round(x,2) ).astype(float)
-    )
-
-    emprestimos_abertos_tomador["corretora"] = emprestimos_abertos_tomador[
-    "corretora"
-    ].astype(str)
-
-    # emprestimos_abertos_tomador["taxa corretagem"] = emprestimos_abertos_tomador.apply(
-    # lambda row: taxas.taxa_corretagem_aluguel(df, row["corretora"], "T", row["taxa"]),
-    # axis=1,
-    # )
-    emprestimos_abertos_tomador["negeletr type"] = 'R'
-    # emprestimos_abertos_tomador["negeletr type"] = emprestimos_abertos_tomador[
-    # "negeletr"cd ..
-    # ].apply(lambda x: "R" if (x == False) else "N")
-
-    emprestimos_abertos_tomador["taxa b3"] = emprestimos_abertos_tomador.apply(
-    lambda row: taxas.calculo_b3(taxa=row["taxa"], tipo_registro=row["negeletr type"]),
-    axis=1,
-    )
-
-    emprestimos_abertos_tomador["taxa real"] = (
-    emprestimos_abertos_tomador["taxa"]*1.1
-    + emprestimos_abertos_tomador["taxa b3"]
-    )
-
-    emprestimos_abertos_tomador["taxa media"] = (
-    emprestimos_abertos_tomador["codigo"]
-    .apply(lambda x: DB.get_taxa(ticker_name=x, pos=0))
-    .astype(float)
-    )
-
-    emprestimos_abertos_tomador["tx_est_doadora"] = (
-    emprestimos_abertos_tomador["taxa media"].apply(lambda x: x * 0.9).astype(float)
-    )
-
-    emprestimos_abertos_tomador["at"] = emprestimos_abertos_tomador.apply(
-    lambda row: compara_taxa(row["taxa real"], row["tx_est_doadora"]), axis=1
-    )
+        emprestimos_abertos_tomador["taxa real"] = (
+        emprestimos_abertos_tomador["taxa"]*1.2
+        )
 
 
-    emprestimos_doar = emprestimos_abertos_tomador[
-    emprestimos_abertos_tomador["at"] == "Doar"
-    ]
+        emprestimos_abertos = emprestimos_abertos.merge(taxas,on='codigo',how='inner')
+        emprestimos_abertos['Acao'] = emprestimos_abertos.apply(lambda row: compara_taxa(row['taxa real'],row['taxa d-1']),axis=1)
 
-    emprestimos_devolver = emprestimos_abertos_tomador[
-    emprestimos_abertos_tomador["at"] == "Devolver"
-    ]
+        emprestimos_abertos = emprestimos_abertos[emprestimos_abertos['Acao']=='Devolver']
 
-    ativos_doar = emprestimos_doar["codigo"]
-
-    ativos_doar = ativos_doar.drop_duplicates()
-    return emprestimos_abertos_tomador
+        return emprestimos_abertos_tomador[['data','fundo','corretora','tipo','taxa','vencimento','preco','reversivel','codigo','contrato','quantidade']]
+    else:
+        return emprestimos_abertos_tomador[['data','fundo','corretora','tipo','taxa','vencimento','preco','reversivel','codigo','contrato','quantidade']]
 # print(ativos_doar)
 
 
-def get_devolucao(df:pd.DataFrame):
-    data=main(df)
+
+
+def get_devolucao(side):
+    data=main(side)
     
 
     

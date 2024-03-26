@@ -28,6 +28,10 @@ def load_holidays(calendar="BR"):
             db_conn.close()
             return holidays
     except Exception as e:
+        try:
+            db_conn.close()
+        except:
+            pass
         print(str(e))
     return
 

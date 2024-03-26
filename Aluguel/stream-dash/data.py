@@ -5,16 +5,16 @@ from matplotlib.pyplot import axis
 
 sys.path.append("..")
 from unicodedata import name
-import mapa
+import mapa_v2 as mapa
 import datetime
 import DB
-from devolucoes.devolucao import fill_devol, fill_devol_doador
+from devolucoes.devolucao import fill_devol
 import carteira_ibov
 from BBI import get_bbi
 import workdays
 import psycopg2
 import pandas as pd
-import config
+import config2 as config
 import os
 import streamlit as st
 from boletas import email_gmail
@@ -156,7 +156,7 @@ def get_risk_taxes(stocks):
     start = '2020-10-26'
         
     CORPORATE_DSN_CONNECTION_STRING = "DSN=Kapitalo_Corp"
-
+    
     aux = '"MktNm":"Balcao"'
     connection = pyodbc.connect(CORPORATE_DSN_CONNECTION_STRING)
 
